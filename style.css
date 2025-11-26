@@ -1,0 +1,156 @@
+:root {
+    /* Paleta de colores principal */
+    --primary: #2563eb;
+    --secondary: #475569;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --bg-light: #9cb6d1;
+    --white: #b2c8df;
+    
+    /* Variables de UI */
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --radius: 0.5rem;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif; 
+}
+
+body {
+    background-color: var(--bg-light);
+    color: #1e293b;
+    display: flex; /* Layout principal flexible */
+    min-height: 100vh;
+}
+
+/* ---Barra Lateral (Sidebar)--- */
+.sidebar {
+    width: 250px;
+    background-color: var(--white);
+    padding: 2rem;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    position: fixed; /* Fija para que no se mueva al hacer scroll */
+    height: 100vh;
+    z-index: 100;
+}
+
+.brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-links {
+    list-style: none;
+}
+
+.nav-item {
+    margin-bottom: 0.5rem;
+}
+
+.nav-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--secondary);
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-btn:hover, .nav-btn.active {
+    background-color: #eff6ff;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* --- Contenido Principal --- */
+.main-content {
+    flex: 1;
+    margin-left: 250px; /* Margen igual al ancho del sidebar */
+    padding: 2rem;
+    max-width: 1600px; /* Evita que se estire demasiado en pantallas 4k */
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.date-filter input {
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius);
+}
+
+/* ---Manejo de Vistas (Secciones)--- */
+.section {
+    display: none; /* Ocultamos todas por defecto */
+    animation: fadeIn 0.3s ease;
+}
+
+.section.active {
+    display: block; /* Solo mostramos la activa */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---Clases basicas para futuros componentes--- */
+.card {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+}
+
+.btn {
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-primary { background-color: var(--primary); color: white; }
+.btn-primary:hover { background-color: #1d4ed8; }
+
+.btn-danger { background-color: var(--danger); color: white; }
+
+.form-control {
+    width: 100%;
+    padding: 0.625rem;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* ---Responsividad--- */
+@media (max-width: 768px) {
+    .sidebar { width: 70px; padding: 1rem 0.5rem; }
+    .main-content { margin-left: 70px; }
+    .nav-btn { justify-content: center; }
+}

@@ -11,6 +11,7 @@
     <!--Iconos para mejorar la UI-->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <!--Vinculamos nuestro style.css-->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -34,32 +35,33 @@
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('categories')">
-                    <i class="fas fa-tags"></i> <span>Categorias</span>
+                    <i class="fas fa-tags"></i> <span>CategorIas</span>
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-btn" onclick="app.navigate('budgets')">
-                    <i class="fas fa-bullseye"></i> <span>Presupuestos</span>
-                </button>
-            </li>
-        </ul>
-    </nav>
-
-    <!--Contenido Principal-->
-    <main class="main-content">
-        
-        <!--Header Comun-->
-        <header class="header">
-            <h2 id="page-title">Dashboard</h2>
-            <div class="date-filter">
-                <input type="month" id="global-month">
+        <!--VISTA: CATEGORIAS-->
+        <section id="categories" class="section">
+            <div class="card" style="margin-bottom: 1rem;">
+                <h3>Gestionar CategorIas</h3>
+                <!-- Evento onsubmit para agregar categoria -->
+                <form onsubmit="app.addCategory(event)" style="display: flex; gap: 10px; margin-top: 1rem;">
+                    <input type="text" id="cat-name" placeholder="Nombre de categorIa" class="form-control" required>
+                    <button type="submit" class="btn btn-primary">Agregar</button>
+                </form>
             </div>
-        </header>
-
-        <!--VISTA: DASHBOARD (incompleto)-->
-        <section id="dashboard" class="section active">
-            <!--Aqui iran los KPIs y Graficos-->
-            <p>Cargando Dashboard...</p>
+            
+            <div class="card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cat-list">
+                        <!-- La lista se llenara con JS -->
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <!--VISTA: TRANSACCIONES (incompleto)-->
@@ -68,7 +70,7 @@
             <p>Cargando Transacciones...</p>
         </section>
 
-        <!--VISTA: CATEGORiAS (incompleto)-->
+        <!--VISTA: CATEGORIAS (incompleto)-->
         <section id="categories" class="section">
             <!--Aqui ira la gestion de categorias-->
             <p>Cargando Categorias...</p>
@@ -82,7 +84,7 @@
 
     </main>
 
-    <!--Vinculamos nuestro script principal-->
+    <!--Vinculamos nuestro script.js-->
     <script src="script.js"></script>
 </body>
 </html>

@@ -13,11 +13,12 @@
     --radius: 0.5rem;
 }
 
+/* Reset básico */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', system-ui, sans-serif; 
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 body {
@@ -151,6 +152,32 @@ body {
 /* ---Responsividad--- */
 @media (max-width: 768px) {
     .sidebar { width: 70px; padding: 1rem 0.5rem; }
+    .brand span, .nav-btn span { display: none; } /* Ocultar texto en móviles */
     .main-content { margin-left: 70px; }
     .nav-btn { justify-content: center; }
+}
+/* ---Estilos de Tablas--- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.data-table th, .data-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table th { 
+    background-color: #f8fafc; 
+    font-weight: 600; 
+}
+
+/* Ajuste para inputs en linea */
+.form-control {
+    margin-bottom: 0; /* Quitamos margen inferior en formularios de una linea */
 }

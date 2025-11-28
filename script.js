@@ -62,9 +62,9 @@ class FinanceDB {
         });
     }
 
-    // --- Metodos Genericos para leer/escribir datos ---
+    //Metodos Genericos para leer/escribir datos
 
-    // Obtener todos los datos de una tabla (store)
+    //Obtener todos los datos de una tabla (store)
     getAll(storeName) {
         return new Promise((resolve) => {
             const tx = this.db.transaction(storeName, 'readonly');
@@ -74,7 +74,7 @@ class FinanceDB {
         });
     }
 
-    // Agregar un dato a una tabla
+    //Agregar un dato a una tabla
     add(storeName, data) {
         return new Promise((resolve) => {
             const tx = this.db.transaction(storeName, 'readwrite');
@@ -84,7 +84,7 @@ class FinanceDB {
         });
     }
 
-    // Eliminar un dato por su ID
+     //Eliminar un dato por su ID
     delete(storeName, id) {
         return new Promise((resolve) => {
             const tx = this.db.transaction(storeName, 'readwrite');
@@ -102,42 +102,99 @@ class FinanceDB {
 class FinanceApp {
     constructor() {
         this.db = new FinanceDB();
-        // Definimos el mes actual usando hora LOCAL (no UTC) para evitar errores de zona horaria
+        //Definimos el mes actual usando hora LOCAL (no UTC) para evitar errores de zona horaria
         const now = new Date();
         const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0'); // Asegura que sea '05' y no '5'
+        const month = String(now.getMonth() + 1).padStart(2, '0');
         this.currentMonth = `${year}-${month}`;
     }
 
     async init() {
-        // 1. Conectar a la BD
+        //1. Conectar a la BD
         await this.db.connect();
         
         // 2. Inicializar filtro de fecha en el HTML
-        // (Eliminada la llamada a setupNavigation que causaba el error)
         const dateInput = document.getElementById('global-month');
         if(dateInput) {
             dateInput.value = this.currentMonth;
         }
 
-        console.log("App Inicializada y lista. Mes actual:", this.currentMonth);
+        //Cargar categorias al iniciar
+        this.updateUI();
+        
+        console.log("App Inicializada. Categorias cargadas.");
     }
 
-    // Maneja el cambio de pestañas (Dashboard, Transacciones, etc.)
+    async updateUI() {
+        // Funcion central para actualizar toda la interfaz
+        await this.renderCategories();
+    }
+
+    //LOGICA DE CATEGORIAS
+
+    //1. Renderizar la tabla de categorias
+    async renderCategories() {
+        const categories = await this.db.getAll('categories');
+        const list = document.getElementById('cat-list');
+
+        //Limpiamos la lista antes de volver a pintar
+        if (list) {
+            list.innerHTML = '';
+            categories.forEach(cat => {
+                list.innerHTML += `
+                    <tr>
+                        <td>${cat.name}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    //2. Agregar nueva categoria
+    async addCategory(e) {
+        e.preventDefault(); // Evita que se recargue la pagina
+        const nameInput = document.getElementById('cat-name');
+        const name = nameInput.value;
+        
+        if(name) {
+            await this.db.add('categories', { name });
+            nameInput.value = ''; // Limpiar input
+            this.updateUI(); // Recargar lista
+            alert('Categoría agregada correctamente');
+        }
+    }
+
+    //3. Eliminar categoria
+    async deleteCategory(id) {
+        if(confirm('¿Eliminar categoría? Se borrarán las transacciones asociadas.')) {
+            // Nota: Mas adelante aqui borraremos tambien las transacciones asociadas
+            // Por ahora, solo borramos la categoria de la BD
+            await this.db.delete('categories', id);
+            this.updateUI();
+        }
+    }
+
+    //Maneja el cambio de pestañas (Dashboard, Transacciones, etc.)
     navigate(sectionId) {
-        // Ocultar todas las secciones
+        //Ocultar todas las secciones
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        // Mostrar la deseada
+
+        //Mostrar la deseada
         document.getElementById(sectionId).classList.add('active');
-        
-        // Actualizar botones del menu
+
+        //Actualizar botones del menu
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        
-        // Buscar el boton que llamo a esta funcion y activarlo visualmente
+
+        //Buscar el boton que llamo a esta funcion y activarlo visualmente
         const activeBtn = document.querySelector(`button[onclick="app.navigate('${sectionId}')"]`);
         if(activeBtn) activeBtn.classList.add('active');
         
-        // Cambiar titulo
+        //Cambiar titulo
         const titles = {
             'dashboard': 'Dashboard Principal',
             'transactions': 'Historial de Transacciones',
@@ -148,15 +205,15 @@ class FinanceApp {
         if(titleEl) titleEl.innerText = titles[sectionId];
     }
     
-    // Placeholder para cuando cambie la fecha
+    //Placeholder para cuando cambie la fecha
     handleDateChange(value) {
         this.currentMonth = value;
         console.log("Mes cambiado a:", this.currentMonth);
     }
 }
 
-// Instancia global de la aplicacion
+//Instancia global de la aplicacion
 const app = new FinanceApp();
 
-// Iniciar cuando el navegador termine de cargar
+//Iniciar cuando el navegador termine de cargar
 window.onload = () => app.init();

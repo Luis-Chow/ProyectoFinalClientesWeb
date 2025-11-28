@@ -11,7 +11,7 @@
     <!--Iconos para mejorar la UI-->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!--Vinculamos nuestro style.css-->
+    <!--Vinculamos nuestro CSS-->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -35,9 +35,40 @@
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('categories')">
-                    <i class="fas fa-tags"></i> <span>CategorIas</span>
+                    <i class="fas fa-tags"></i> <span>Categorias</span>
                 </button>
             </li>
+            <li class="nav-item">
+                <button class="nav-btn" onclick="app.navigate('budgets')">
+                    <i class="fas fa-bullseye"></i> <span>Presupuestos</span>
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <!--Contenido Principal-->
+    <main class="main-content">
+        
+        <!--Header Comun-->
+        <header class="header">
+            <h2 id="page-title">Dashboard</h2>
+            <div class="date-filter">
+                <input type="month" id="global-month">
+            </div>
+        </header>
+
+        <!--VISTA: DASHBOARD (incompleto)-->
+        <section id="dashboard" class="section active">
+            <!--Aqui iran los KPIs y Graficos-->
+            <p>Cargando Dashboard...</p>
+        </section>
+
+        <!--VISTA: TRANSACCIONES (incompleto)-->
+        <section id="transactions" class="section">
+            <!--Aqui ira el formulario y la tabla de transacciones-->
+            <p>Cargando Transacciones...</p>
+        </section>
+
         <!--VISTA: CATEGORIAS-->
         <section id="categories" class="section">
             <div class="card" style="margin-bottom: 1rem;">
@@ -64,18 +95,6 @@
             </div>
         </section>
 
-        <!--VISTA: TRANSACCIONES (incompleto)-->
-        <section id="transactions" class="section">
-            <!--Aqui ira el formulario y la tabla de transacciones-->
-            <p>Cargando Transacciones...</p>
-        </section>
-
-        <!--VISTA: CATEGORIAS (incompleto)-->
-        <section id="categories" class="section">
-            <!--Aqui ira la gestion de categorias-->
-            <p>Cargando Categorias...</p>
-        </section>
-
         <!--VISTA: PRESUPUESTOS (incompleto)-->
         <section id="budgets" class="section">
             <!--Aqui ira la configuracion de presupuestos-->
@@ -84,7 +103,7 @@
 
     </main>
 
-    <!--Vinculamos nuestro script.js-->
+    <!--Vinculamos nuestro js-->
     <script src="script.js"></script>
 </body>
 </html>

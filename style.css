@@ -135,10 +135,19 @@ body {
     transition: background 0.2s;
 }
 
-.btn-primary { background-color: var(--primary); color: white; }
-.btn-primary:hover { background-color: #1d4ed8; }
+.btn-primary { 
+    background-color: var(--primary); 
+    color: white; 
+}
 
-.btn-danger { background-color: var(--danger); color: white; }
+.btn-primary:hover { 
+    background-color: #1d4ed8; 
+}
+
+.btn-danger { 
+    background-color: var(--danger); 
+    color: white; 
+}
 
 .form-control {
     width: 100%;
@@ -152,11 +161,11 @@ body {
 /* ---Responsividad--- */
 @media (max-width: 768px) {
     .sidebar { width: 70px; padding: 1rem 0.5rem; }
-    .brand span, .nav-btn span { display: none; } /* Ocultar texto en móviles */
     .main-content { margin-left: 70px; }
     .nav-btn { justify-content: center; }
 }
-/* ---Estilos de Tablas--- */
+
+/* ---Estilos de Tablas (Categorias)--- */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -180,4 +189,34 @@ body {
 /* Ajuste para inputs en linea */
 .form-control {
     margin-bottom: 0; /* Quitamos margen inferior en formularios de una linea */
+}
+
+/* ---Estilos para Tags y Textos (Transacciones)--- */
+.tag { 
+    padding: 0.25rem 0.5rem; 
+    border-radius: 999px; 
+    font-size: 0.75rem; 
+    font-weight: 600; 
+}
+
+.tag-income { 
+    background-color: #dcfce7; 
+    color: #166534; 
+}
+
+.tag-expense { 
+    background-color: #fee2e2; 
+    color: #991b1b; 
+}
+
+.text-success { 
+    color: var(--success); 
+}
+
+.text-danger { 
+    color: var(--danger); 
+}
+
+.font-bold { 
+    font-weight: bold; 
 }

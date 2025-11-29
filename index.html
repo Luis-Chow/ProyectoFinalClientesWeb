@@ -63,10 +63,43 @@
             <p>Cargando Dashboard...</p>
         </section>
 
-        <!--VISTA: TRANSACCIONES (incompleto)-->
+        <!--VISTA: TRANSACCIONES-->
         <section id="transactions" class="section">
-            <!--Aqui ira el formulario y la tabla de transacciones-->
-            <p>Cargando Transacciones...</p>
+            <div class="card form-group">
+                <h3>Nueva Transacción</h3>
+                <form id="tx-form" onsubmit="app.addTransaction(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 1rem;">
+                    <select id="tx-type" class="form-control" required>
+                        <option value="expense">Egreso</option>
+                        <option value="income">Ingreso</option>
+                    </select>
+                    <input type="number" id="tx-amount" placeholder="Monto" class="form-control" step="0.01" min="0" required>
+                    <input type="date" id="tx-date" class="form-control" required>
+                    <select id="tx-category" class="form-control" required>
+                        <option value="">Seleccionar Categoría...</option>
+                    </select>
+                    <input type="text" id="tx-desc" placeholder="Descripción" class="form-control">
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <input type="text" id="search-tx" placeholder="Buscar transacción..." class="form-control" style="margin-bottom: 1rem;" onkeyup="app.renderTransactions()">
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Categoría</th>
+                                <th>Descripción</th>
+                                <th>Monto</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-list"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
         <!--VISTA: CATEGORIAS-->

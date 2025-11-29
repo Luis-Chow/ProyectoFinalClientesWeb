@@ -128,6 +128,7 @@ class FinanceApp {
     async updateUI() {
         // Funcion central para actualizar toda la interfaz
         await this.renderCategories();
+        await this.renderTransactions();
     }
 
     //LOGICA DE CATEGORIAS
@@ -136,22 +137,20 @@ class FinanceApp {
     async renderCategories() {
         const categories = await this.db.getAll('categories');
         const list = document.getElementById('cat-list');
+        const selectTx = document.getElementById('tx-category');
 
         //Limpiamos la lista antes de volver a pintar
         if (list) {
             list.innerHTML = '';
+            if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoría...</option>';
             categories.forEach(cat => {
-                list.innerHTML += `
-                    <tr>
-                        <td>${cat.name}</td>
-                        <td>
-                            <button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+            if (list) {
+                list.innerHTML += `<tr><td>${cat.name}</td><td><button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+            }
+            if (selectTx) {
+                selectTx.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+            }
+        });
         }
     }
 
@@ -175,6 +174,62 @@ class FinanceApp {
             // Nota: Mas adelante aqui borraremos tambien las transacciones asociadas
             // Por ahora, solo borramos la categoria de la BD
             await this.db.delete('categories', id);
+            this.updateUI();
+        }
+    }
+
+    //LOGICA DE TRANSACCIONES
+
+    //1. Renderizar la tabla de transacciones
+    async renderTransactions() {
+        const allTxs = await this.db.getAll('transactions');
+        const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
+        
+        const filtered = allTxs
+            .filter(t => (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const tbody = document.getElementById('tx-list');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+
+        filtered.forEach(tx => {
+            const isIncome = tx.type === 'income';
+            tbody.innerHTML += `
+                <tr>
+                    <td>${tx.date}</td>
+                    <td><span class="tag ${isIncome ? 'tag-income' : 'tag-expense'}">${isIncome ? 'Ingreso' : 'Egreso'}</span></td>
+                    <td>${tx.category}</td>
+                    <td>${tx.desc || '-'}</td>
+                    <td class="${isIncome ? 'text-success' : 'text-danger'} font-bold">
+                        ${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}
+                    </td>
+                    <td><button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `;
+        });
+    }
+
+    //2. Agregar nueva transaccion
+    async addTransaction(e) {
+        e.preventDefault();
+        const type = document.getElementById('tx-type').value;
+        const amount = parseFloat(document.getElementById('tx-amount').value);
+        const date = document.getElementById('tx-date').value;
+        const category = document.getElementById('tx-category').value;
+        const desc = document.getElementById('tx-desc').value;
+
+        await this.db.add('transactions', { type, amount, date, category, desc });
+        e.target.reset();
+        document.getElementById('tx-date').valueAsDate = new Date();
+        this.updateUI();
+        alert('Transacción guardada');
+    }
+
+    //3. Eliminar transaccion
+    async deleteTransaction(id) {
+        if(confirm('¿Eliminar transacción?')) {
+            await this.db.delete('transactions', id);
             this.updateUI();
         }
     }
@@ -208,7 +263,7 @@ class FinanceApp {
     //Placeholder para cuando cambie la fecha
     handleDateChange(value) {
         this.currentMonth = value;
-        console.log("Mes cambiado a:", this.currentMonth);
+        this.updateUI();
     }
 }
 

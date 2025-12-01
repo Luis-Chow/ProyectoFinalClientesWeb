@@ -102,7 +102,7 @@ class FinanceDB {
 class FinanceApp {
     constructor() {
         this.db = new FinanceDB();
-        //Definimos el mes actual usando hora LOCAL (no UTC) para evitar errores de zona horaria
+        // Definimos el mes actual
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -129,6 +129,7 @@ class FinanceApp {
         // Funcion central para actualizar toda la interfaz
         await this.renderCategories();
         await this.renderTransactions();
+        await this.renderBudgets();
     }
 
     //LOGICA DE CATEGORIAS
@@ -138,20 +139,36 @@ class FinanceApp {
         const categories = await this.db.getAll('categories');
         const list = document.getElementById('cat-list');
         const selectTx = document.getElementById('tx-category');
+        
+        //Referencia al select de presupuestos
+        const selectBudget = document.getElementById('budget-category');
 
-        //Limpiamos la lista antes de volver a pintar
-        if (list) {
-            list.innerHTML = '';
-            if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoría...</option>';
-            categories.forEach(cat => {
+        if (list) list.innerHTML = '';
+        if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoría...</option>';
+        if (selectBudget) selectBudget.innerHTML = '<option value="">Categoría...</option>';
+
+        categories.forEach(cat => {
+            // Llenar tabla de gestion
             if (list) {
-                list.innerHTML += `<tr><td>${cat.name}</td><td><button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+                list.innerHTML += `
+                    <tr>
+                        <td>${cat.name}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
             }
             if (selectTx) {
                 selectTx.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
             }
+            // Llenar select de presupuestos
+            if (selectBudget) {
+                selectBudget.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+            }
         });
-        }
     }
 
     //2. Agregar nueva categoria
@@ -170,9 +187,7 @@ class FinanceApp {
 
     //3. Eliminar categoria
     async deleteCategory(id) {
-        if(confirm('¿Eliminar categoría? Se borrarán las transacciones asociadas.')) {
-            // Nota: Mas adelante aqui borraremos tambien las transacciones asociadas
-            // Por ahora, solo borramos la categoria de la BD
+        if(confirm('¿Eliminar categoría?')) {
             await this.db.delete('categories', id);
             this.updateUI();
         }
@@ -204,7 +219,11 @@ class FinanceApp {
                     <td class="${isIncome ? 'text-success' : 'text-danger'} font-bold">
                         ${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}
                     </td>
-                    <td><button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})"><i class="fas fa-trash"></i></button></td>
+                    <td>
+                        <button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
         });
@@ -234,7 +253,88 @@ class FinanceApp {
         }
     }
 
-    //Maneja el cambio de pestañas (Dashboard, Transacciones, etc.)
+    //LOGICA DE PRESUPUESTOS
+
+    //1. Guardar presupuesto
+    async saveBudget(e) {
+        e.preventDefault();
+        const category = document.getElementById('budget-category').value;
+        const amount = parseFloat(document.getElementById('budget-amount').value);
+        
+        // ID unico compuesto: "2023-10-Alimentacion"
+        const id = `${this.currentMonth}-${category}`;
+        
+        // Usamos .put en lugar de .add para sobrescribir si ya existe
+        const tx = this.db.db.transaction('budgets', 'readwrite');
+        tx.objectStore('budgets').put({ id, month: this.currentMonth, category, limit: amount });
+        
+        tx.oncomplete = () => {
+            alert('Presupuesto actualizado');
+            this.updateUI();
+        };
+    }
+
+    //2. Renderizar presupuestos
+    async renderBudgets() {
+        const budgets = await this.db.getAll('budgets');
+        const transactions = await this.db.getAll('transactions');
+        
+        // 1. Filtrar presupuestos del mes seleccionado
+        const monthBudgets = budgets.filter(b => b.month === this.currentMonth);
+        
+        // 2. Calcular gastos reales de este mes por categoria
+        const expensesByCategory = {};
+        transactions.forEach(t => {
+            // Solo sumamos si es GASTO y coincide con el mes actual
+            if (t.type === 'expense' && t.date.startsWith(this.currentMonth)) {
+                expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
+            }
+        });
+
+        const tbody = document.getElementById('budget-list');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+
+        monthBudgets.forEach(b => {
+            const real = expensesByCategory[b.category] || 0;
+            const diff = b.limit - real;
+            // Evitar division por cero
+            const percent = b.limit > 0 ? (real / b.limit) * 100 : 0;
+            
+            // Colores de alerta
+            let statusColor = 'text-success';
+            if (percent > 80) statusColor = 'text-warning'; // Alerta > 80%
+            if (percent > 100) statusColor = 'text-danger'; // Alerta > 100%
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${b.category}</td>
+                    <td>$${b.limit.toFixed(2)}</td>
+                    <td>$${real.toFixed(2)}</td>
+                    <td class="${diff < 0 ? 'text-danger' : 'text-success'}">$${diff.toFixed(2)}</td>
+                    <td>
+                        <span class="${statusColor}" style="font-weight:bold">${percent.toFixed(1)}%</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger" onclick="app.deleteBudget('${b.id}')" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    //3. Eliminar presupuesto
+    async deleteBudget(id) {
+        if(confirm('¿Eliminar presupuesto para esta categoría?')) {
+            await this.db.delete('budgets', id);
+            this.updateUI();
+        }
+    }
+
+    // ---NAVEGACION---
+
     navigate(sectionId) {
         //Ocultar todas las secciones
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));

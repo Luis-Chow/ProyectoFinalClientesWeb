@@ -128,10 +128,36 @@
             </div>
         </section>
 
-        <!--VISTA: PRESUPUESTOS (incompleto)-->
+        <!--VISTA: PRESUPUESTOS-->
         <section id="budgets" class="section">
-            <!--Aqui ira la configuracion de presupuestos-->
-            <p>Cargando Presupuestos...</p>
+            <div class="card" style="margin-bottom: 1rem;">
+                <h3>Configurar Presupuesto Mensual</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Asigna un límite de gasto para el mes seleccionado arriba.</p>
+                <form onsubmit="app.saveBudget(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <select id="budget-category" class="form-control" required>
+                        <option value="">Cargando...</option>
+                    </select>
+                    <input type="number" id="budget-amount" placeholder="Límite Mensual" class="form-control" required>
+                    <button type="submit" class="btn btn-primary">Establecer Límite</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h3>Estado de Presupuestos (Mes Actual)</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Presupuesto</th>
+                            <th>Gasto Real</th>
+                            <th>Diferencia</th>
+                            <th>Estado</th>
+                            <th>Acción</th> <!-- AQUI AGREGUE LA COLUMNA -->
+                        </tr>
+                    </thead>
+                    <tbody id="budget-list"></tbody>
+                </table>
+            </div>
         </section>
 
     </main>

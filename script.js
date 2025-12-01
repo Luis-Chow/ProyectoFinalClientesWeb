@@ -107,6 +107,7 @@ class FinanceApp {
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         this.currentMonth = `${year}-${month}`;
+        this.charts = {}; // Almacena instancias de graficos para poder destruirlos al actualizar
     }
 
     async init() {
@@ -130,6 +131,7 @@ class FinanceApp {
         await this.renderCategories();
         await this.renderTransactions();
         await this.renderBudgets();
+        await this.updateDashboard();
     }
 
     //LOGICA DE CATEGORIAS
@@ -330,6 +332,102 @@ class FinanceApp {
         if(confirm('¿Eliminar presupuesto para esta categoría?')) {
             await this.db.delete('budgets', id);
             this.updateUI();
+        }
+    }
+
+    async updateDashboard() {
+        const txs = await this.db.getAll('transactions');
+        const budgets = await this.db.getAll('budgets');
+        const monthTxs = txs.filter(t => t.date.startsWith(this.currentMonth));
+        
+        let income = 0, expense = 0;
+        const expensesByCat = {};
+        
+        monthTxs.forEach(t => {
+            if(t.type === 'income') income += t.amount;
+            else {
+                expense += t.amount;
+                expensesByCat[t.category] = (expensesByCat[t.category] || 0) + t.amount;
+            }
+        });
+
+        // KPIs
+        if(document.getElementById('kpi-income')) {
+            document.getElementById('kpi-income').innerText = `$${income.toFixed(2)}`;
+            document.getElementById('kpi-expense').innerText = `$${expense.toFixed(2)}`;
+            document.getElementById('kpi-balance').innerText = `$${(income - expense).toFixed(2)}`;
+            
+            const monthBudgets = budgets.filter(b => b.month === this.currentMonth);
+            const totalBudget = monthBudgets.reduce((acc, b) => acc + b.limit, 0);
+            const budgetStatus = totalBudget > 0 ? (expense / totalBudget) * 100 : 0;
+            document.getElementById('kpi-budget-status').innerText = `${budgetStatus.toFixed(1)}%`;
+        }
+
+        this.renderCharts(monthTxs, expensesByCat, income, expense, budgets, txs);
+    }
+
+    renderCharts(monthTxs, expensesByCat, income, expense, allBudgets, allTxs) {
+        if (!this.charts) this.charts = {};
+        const destroyChart = (id) => { if (this.charts[id]) this.charts[id].destroy(); };
+
+        // 1. Dona (Categorías)
+        if(document.getElementById('chart-categories')) {
+            destroyChart('chart-categories');
+            this.charts['chart-categories'] = new Chart(document.getElementById('chart-categories'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(expensesByCat),
+                    datasets: [{ data: Object.values(expensesByCat), backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'] }]
+                },
+                options: { plugins: { title: { display: true, text: 'Gastos por Categoría' } }, maintainAspectRatio: false }
+            });
+        }
+
+        // 2. Barras (Balance)
+        if(document.getElementById('chart-distribution')) {
+            destroyChart('chart-distribution');
+            this.charts['chart-distribution'] = new Chart(document.getElementById('chart-distribution'), {
+                type: 'bar',
+                data: { labels: ['Ingresos', 'Egresos'], datasets: [{ label: 'Monto', data: [income, expense], backgroundColor: ['#10b981', '#ef4444'] }] },
+                options: { plugins: { title: { display: true, text: 'Balance Mensual' } }, maintainAspectRatio: false }
+            });
+        }
+        
+        // 3. Linea (Tendencia)
+        const history = {};
+        allTxs.forEach(t => {
+            const m = t.date.slice(0, 7);
+            if (!history[m]) history[m] = 0;
+            history[m] += (t.type === 'income' ? t.amount : -t.amount);
+        });
+        const sortedMonths = Object.keys(history).sort();
+
+        if(document.getElementById('chart-balance-trend')) {
+            destroyChart('chart-balance-trend');
+            this.charts['chart-balance-trend'] = new Chart(document.getElementById('chart-balance-trend'), {
+                type: 'line',
+                data: { labels: sortedMonths, datasets: [{ label: 'Balance Histórico', data: sortedMonths.map(m => history[m]), borderColor: '#3b82f6', tension: 0.1 }] },
+                options: { plugins: { title: { display: true, text: 'Evolución' } }, maintainAspectRatio: false }
+            });
+        }
+
+        // 4. Barras Agrupadas (Presupuesto)
+        const monthBudgets = allBudgets.filter(b => b.month === this.currentMonth);
+        const labels = monthBudgets.map(b => b.category);
+        
+        if(document.getElementById('chart-budget-vs-real')) {
+            destroyChart('chart-budget-vs-real');
+            this.charts['chart-budget-vs-real'] = new Chart(document.getElementById('chart-budget-vs-real'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Presupuesto', data: monthBudgets.map(b => b.limit), backgroundColor: '#cbd5e1' },
+                        { label: 'Real', data: monthBudgets.map(b => expensesByCat[b.category] || 0), backgroundColor: '#f59e0b' }
+                    ]
+                },
+                options: { plugins: { title: { display: true, text: 'Presupuesto vs Realidad' } }, maintainAspectRatio: false }
+            });
         }
     }
 

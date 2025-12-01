@@ -57,10 +57,35 @@
             </div>
         </header>
 
-        <!--VISTA: DASHBOARD (incompleto)-->
+        <!--VISTA: DASHBOARD-->
         <section id="dashboard" class="section active">
-            <!--Aqui iran los KPIs y Graficos-->
-            <p>Cargando Dashboard...</p>
+            <!--KPIs-->
+            <div class="kpi-grid">
+                <div class="card">
+                    <div class="kpi-title">Ingresos del Mes</div>
+                    <div class="kpi-value text-success" id="kpi-income">$0.00</div>
+                </div>
+                <div class="card">
+                    <div class="kpi-title">Gastos del Mes</div>
+                    <div class="kpi-value text-danger" id="kpi-expense">$0.00</div>
+                </div>
+                <div class="card">
+                    <div class="kpi-title">Balance</div>
+                    <div class="kpi-value" id="kpi-balance">$0.00</div>
+                </div>
+                <div class="card">
+                    <div class="kpi-title">Ejecución Presupuestal</div>
+                    <div class="kpi-value" id="kpi-budget-status">0%</div>
+                </div>
+            </div>
+
+            <!--Graficos-->
+            <div class="charts-grid">
+                <div class="chart-container"><canvas id="chart-categories"></canvas></div>
+                <div class="chart-container"><canvas id="chart-balance-trend"></canvas></div>
+                <div class="chart-container"><canvas id="chart-budget-vs-real"></canvas></div>
+                <div class="chart-container"><canvas id="chart-distribution"></canvas></div>
+            </div>
         </section>
 
         <!--VISTA: TRANSACCIONES-->

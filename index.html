@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Finanzas Personales</title>
     
-    <!--Importamos Chart.js desde CDN (para futuros graficos)-->
+    <!--Importamos Chart.js desde CDN-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!--Iconos para mejorar la UI-->
@@ -130,10 +130,10 @@
         <!--VISTA: CATEGORIAS-->
         <section id="categories" class="section">
             <div class="card" style="margin-bottom: 1rem;">
-                <h3>Gestionar CategorIas</h3>
-                <!-- vento onsubmit para agregar categoria-->
+                <h3>Gestionar Categorias</h3>
+                <!--Evento onsubmit para agregar categoria-->
                 <form onsubmit="app.addCategory(event)" style="display: flex; gap: 10px; margin-top: 1rem;">
-                    <input type="text" id="cat-name" placeholder="Nombre de categorIa" class="form-control" required>
+                    <input type="text" id="cat-name" placeholder="Nombre de categoria" class="form-control" required>
                     <button type="submit" class="btn btn-primary">Agregar</button>
                 </form>
             </div>
@@ -147,7 +147,7 @@
                         </tr>
                     </thead>
                     <tbody id="cat-list">
-                        <!-- La lista se llenara con JS -->
+                        <!--La lista se llenara con JS-->
                     </tbody>
                 </table>
             </div>

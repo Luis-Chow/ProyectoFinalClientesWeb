@@ -8,7 +8,7 @@ class FinanceDB {
         this.dbVersion = 1;
         this.db = null;
     }
-
+    
     // Inicializa la conexion y crea las tablas si no existen
     async connect() {
         return new Promise((resolve, reject) => {
@@ -33,7 +33,7 @@ class FinanceDB {
                     // Agregar datos iniciales (Semilla)
                     catStore.transaction.oncomplete = () => {
                         const categoryStore = db.transaction('categories', 'readwrite').objectStore('categories');
-                        const defaults = ['Alimentación', 'Transporte', 'Ocio', 'Servicios', 'Salud', 'Educación', 'Otros'];
+                        const defaults = ['Alimentacion', 'Transporte', 'Ocio', 'Servicios', 'Salud', 'Educacion', 'Otros'];
                         defaults.forEach(name => categoryStore.add({ name: name }));
                         console.log("Categorias por defecto insertadas.");
                     };
@@ -138,41 +138,79 @@ class FinanceApp {
         await this.updateDashboard();
     }
 
+    createEl(tag, className = '', text = '') {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (text) el.textContent = text; // textContent es SEGURO contra XSS
+        return el;
+    }
+    
     //LOGICA DE CATEGORIAS
 
     //1. Renderizar la tabla de categorias
     async renderCategories() {
         const categories = await this.db.getAll('categories');
+        
+        // Referencias a elementos del DOM
         const list = document.getElementById('cat-list');
         const selectTx = document.getElementById('tx-category');
-        
-        //Referencia al select de presupuestos
         const selectBudget = document.getElementById('budget-category');
 
-        if (list) list.innerHTML = '';
-        if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoria...</option>';
-        if (selectBudget) selectBudget.innerHTML = '<option value="">Categoria...</option>';
+        // Limpieza SEGURA (reemplaza innerHTML = '')
+        if (list) list.replaceChildren(); 
+        
+        // Resetear selects manteniendo la opcion por defecto
+        if (selectTx) {
+            selectTx.replaceChildren();
+            selectTx.appendChild(this.createEl('option', '', 'Seleccionar Categoria...'));
+        }
+        if (selectBudget) {
+            selectBudget.replaceChildren();
+            selectBudget.appendChild(this.createEl('option', '', 'Categoria...'));
+        }
 
         categories.forEach(cat => {
-            // Llenar tabla de gestion
+            //Llenar tabla de gestion
             if (list) {
-                list.innerHTML += `
-                    <tr>
-                        <td>${cat.name}</td>
-                        <td>
-                            <button class="btn btn-danger" onclick="app.deleteCategory(${cat.id})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
+                const row = this.createEl('tr');
+                
+                //Celda Nombre
+                const tdName = this.createEl('td', '', cat.name);
+                row.appendChild(tdName);
+
+                //Celda Acciones
+                const tdActions = this.createEl('td');
+                
+                //Boton Editar
+                const btnEdit = this.createEl('button', 'btn btn-primary');
+                btnEdit.style.marginRight = '5px';
+                btnEdit.onclick = () => this.editCategory(cat.id); // Evento directo
+                const iconEdit = this.createEl('i', 'fas fa-edit');
+                btnEdit.appendChild(iconEdit);
+
+                //Boton Borrar
+                const btnDel = this.createEl('button', 'btn btn-danger');
+                btnDel.onclick = () => this.deleteCategory(cat.id); // Evento directo
+                const iconDel = this.createEl('i', 'fas fa-trash');
+                btnDel.appendChild(iconDel);
+
+                tdActions.appendChild(btnEdit);
+                tdActions.appendChild(btnDel);
+                row.appendChild(tdActions);
+
+                list.appendChild(row);
             }
+
+            //Llenar selects
             if (selectTx) {
-                selectTx.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                const opt = this.createEl('option', '', cat.name);
+                opt.value = cat.name;
+                selectTx.appendChild(opt);
             }
-            // Llenar select de presupuestos
             if (selectBudget) {
-                selectBudget.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                const opt = this.createEl('option', '', cat.name);
+                opt.value = cat.name;
+                selectBudget.appendChild(opt);
             }
         });
     }
@@ -191,7 +229,43 @@ class FinanceApp {
         }
     }
 
-    //3. Eliminar categoria
+    //3. Editar categoria
+    async editCategory(id) {
+        const categories = await this.db.getAll('categories');
+        const cat = categories.find(c => c.id === id);
+        if (!cat) return;
+
+        const newName = prompt("Nuevo nombre para la categoria:", cat.name);
+        if (newName && newName !== cat.name) {
+            //1. Actualizar la categoria
+            const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
+            
+            //actualizar Category Store
+            const catStore = txCat.objectStore('categories');
+            catStore.put({ id: id, name: newName });
+
+            //2. Actualizar Transacciones asociadas
+            const txStore = txCat.objectStore('transactions');
+            const allTxsRequest = txStore.getAll();
+            
+            allTxsRequest.onsuccess = () => {
+                const transactions = allTxsRequest.result;
+                transactions.forEach(t => {
+                    if (t.category === cat.name) {
+                        t.category = newName; // Cambiamos el nombre viejo por el nuevo
+                        txStore.put(t);
+                    }
+                });
+            };
+
+            txCat.oncomplete = () => {
+                alert('Categoria y transacciones actualizadas.');
+                this.updateUI();
+            };
+        }
+    } 
+
+    //4. Eliminar categoria
     async deleteCategory(id) {
         if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
 
@@ -225,7 +299,6 @@ class FinanceApp {
         const allTxs = await this.db.getAll('transactions');
         const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
         
-        // Ordenar por fecha descendente
         const filtered = allTxs
             .filter(t => (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
             .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -233,41 +306,59 @@ class FinanceApp {
         const tbody = document.getElementById('tx-list');
         if(!tbody) return;
 
-        // Limpiamos la tabla antes de llenarla
-        tbody.innerHTML = '';
-        
-        // Variable para acumular el HTML (Mejor rendimiento que += directo al DOM)
-        let htmlContent = '';
+        //Limpieza segura
+        tbody.replaceChildren();
 
         filtered.forEach(tx => {
             const isIncome = tx.type === 'income';
-            
-            // Construimos la fila
-            htmlContent += `
-                <tr>
-                    <td>${tx.date}</td>
-                    <td><span class="tag ${isIncome ? 'tag-income' : 'tag-expense'}">${isIncome ? 'Ingreso' : 'Egreso'}</span></td>
-                    <td>${tx.category}</td>
-                    <td>${tx.desc || '-'}</td>
-                    <td class="${isIncome ? 'text-success' : 'text-danger'} font-bold">
-                        ${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}
-                    </td>
-                    <td style="display:flex; gap:5px;">
-                        <button class="btn btn-primary" onclick="app.editTransaction(${tx.id})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})" title="Borrar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
+            const row = this.createEl('tr');
 
-        // Insertamos todo el HTML de una sola vez
-        tbody.innerHTML = htmlContent;
+            //Fecha
+            row.appendChild(this.createEl('td', '', tx.date));
+
+            //Tipo 
+            const tdType = this.createEl('td');
+            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Ingreso' : 'Egreso');
+            tdType.appendChild(spanType);
+            row.appendChild(tdType);
+
+            //Categoria
+            row.appendChild(this.createEl('td', '', tx.category));
+
+            //Descripcion (SEGURIDAD CRiTICA AQUi)
+            row.appendChild(this.createEl('td', '', tx.desc || '-'));
+
+            //Monto
+            const tdAmount = this.createEl('td', isIncome ? 'text-success font-bold' : 'text-danger font-bold');
+            tdAmount.textContent = `${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}`;
+            row.appendChild(tdAmount);
+
+            //Acciones
+            const tdActions = this.createEl('td');
+            tdActions.style.display = 'flex';
+            tdActions.style.gap = '5px';
+
+            //Boton Editar
+            const btnEdit = this.createEl('button', 'btn btn-primary');
+            btnEdit.title = 'Editar';
+            btnEdit.onclick = () => this.editTransaction(tx.id); // Vinculacion directa
+            btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
+            
+            //Boton Borrar
+            const btnDel = this.createEl('button', 'btn btn-danger');
+            btnDel.title = 'Borrar';
+            btnDel.onclick = () => this.deleteTransaction(tx.id); // Vinculacion directa
+            btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
+
+            tdActions.appendChild(btnEdit);
+            tdActions.appendChild(btnDel);
+            row.appendChild(tdActions);
+
+            // Agregar fila a la tabla
+            tbody.appendChild(row);
+        });
     }
-    
+
     //2. Agregar nueva transaccion
     async addTransaction(e) {
         e.preventDefault();
@@ -286,19 +377,19 @@ class FinanceApp {
             });
             
             tx.oncomplete = () => {
-                alert('Transacción actualizada');
+                alert('Transaccion actualizada');
                 this.editingTxId = null; // Resetear estado
                 document.querySelector('#tx-form button[type="submit"]').innerText = "Guardar";
                 e.target.reset();
                 this.updateUI();
             };
         } else {
-            // MODO CREACIÓN (Código original)
+            // MODO CREACIoN (Codigo original)
             await this.db.add('transactions', { type, amount, date, category, desc });
             e.target.reset();
             document.getElementById('tx-date').valueAsDate = new Date();
             this.updateUI();
-            alert('Transacción guardada');
+            alert('Transaccion guardada');
         }
     }
     
@@ -340,7 +431,7 @@ class FinanceApp {
 
     //4. Eliminar transaccion
     async deleteTransaction(id) {
-        if(confirm('¿Eliminar transacción?')) {
+        if(confirm('¿Eliminar transaccion?')) {
             await this.db.delete('transactions', id);
             this.updateUI();
         }
@@ -372,13 +463,10 @@ class FinanceApp {
         const budgets = await this.db.getAll('budgets');
         const transactions = await this.db.getAll('transactions');
         
-        // 1. Filtrar presupuestos del mes seleccionado
         const monthBudgets = budgets.filter(b => b.month === this.currentMonth);
         
-        // 2. Calcular gastos reales de este mes por categoria
         const expensesByCategory = {};
         transactions.forEach(t => {
-            // Solo sumamos si es GASTO y coincide con el mes actual
             if (t.type === 'expense' && t.date.startsWith(this.currentMonth)) {
                 expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
             }
@@ -386,35 +474,54 @@ class FinanceApp {
 
         const tbody = document.getElementById('budget-list');
         if(!tbody) return;
-        tbody.innerHTML = '';
+        
+        //Limpieza segura
+        tbody.replaceChildren();
 
         monthBudgets.forEach(b => {
             const real = expensesByCategory[b.category] || 0;
             const diff = b.limit - real;
-            // Evitar division por cero
             const percent = b.limit > 0 ? (real / b.limit) * 100 : 0;
             
-            // Colores de alerta
-            let statusColor = 'text-success';
-            if (percent > 80) statusColor = 'text-warning'; // Alerta > 80%
-            if (percent > 100) statusColor = 'text-danger'; // Alerta > 100%
+            const row = this.createEl('tr');
 
-            tbody.innerHTML += `
-                <tr>
-                    <td>${b.category}</td>
-                    <td>$${b.limit.toFixed(2)}</td>
-                    <td>$${real.toFixed(2)}</td>
-                    <td class="${diff < 0 ? 'text-danger' : 'text-success'}">$${diff.toFixed(2)}</td>
-                    <td>
-                        <span class="${statusColor}" style="font-weight:bold">${percent.toFixed(1)}%</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-danger" onclick="app.deleteBudget('${b.id}')" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+            //Categoria
+            row.appendChild(this.createEl('td', '', b.category));
+            
+            //Presupuesto
+            row.appendChild(this.createEl('td', '', `$${b.limit.toFixed(2)}`));
+            
+            //Gasto Real
+            row.appendChild(this.createEl('td', '', `$${real.toFixed(2)}`));
+            
+            //Diferencia
+            const tdDiff = this.createEl('td', diff < 0 ? 'text-danger' : 'text-success');
+            tdDiff.textContent = `$${diff.toFixed(2)}`;
+            row.appendChild(tdDiff);
+
+            //Estado (Porcentaje)
+            const tdStatus = this.createEl('td');
+            let statusClass = 'text-success';
+            if (percent > 80) statusClass = 'text-warning';
+            if (percent > 100) statusClass = 'text-danger';
+            
+            const spanStatus = this.createEl('span', statusClass, `${percent.toFixed(1)}%`);
+            spanStatus.style.fontWeight = 'bold';
+            tdStatus.appendChild(spanStatus);
+            row.appendChild(tdStatus);
+
+            // Accion (Borrar)
+            const tdAction = this.createEl('td');
+            const btnDel = this.createEl('button', 'btn btn-danger');
+            btnDel.style.padding = '0.25rem 0.5rem';
+            btnDel.style.fontSize = '0.8rem';
+            btnDel.onclick = () => this.deleteBudget(b.id);
+            btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
+            
+            tdAction.appendChild(btnDel);
+            row.appendChild(tdAction);
+
+            tbody.appendChild(row);
         });
     }
 
@@ -497,8 +604,8 @@ class FinanceApp {
             destroyChart('chart-balance-trend');
             this.charts['chart-balance-trend'] = new Chart(document.getElementById('chart-balance-trend'), {
                 type: 'line',
-                data: { labels: sortedMonths, datasets: [{ label: 'Balance Histórico', data: sortedMonths.map(m => history[m]), borderColor: '#3b82f6', tension: 0.1 }] },
-                options: { plugins: { title: { display: true, text: 'Evolución' } }, maintainAspectRatio: false }
+                data: { labels: sortedMonths, datasets: [{ label: 'Balance Historico', data: sortedMonths.map(m => history[m]), borderColor: '#3b82f6', tension: 0.1 }] },
+                options: { plugins: { title: { display: true, text: 'Evolucion' } }, maintainAspectRatio: false }
             });
         }
 
@@ -542,7 +649,7 @@ class FinanceApp {
         const titles = {
             'dashboard': 'Dashboard Principal',
             'transactions': 'Historial de Transacciones',
-            'categories': 'Gestión de Categorias',
+            'categories': 'Gestion de Categorias',
             'budgets': 'Control de Presupuestos'
         };
         const titleEl = document.getElementById('page-title');

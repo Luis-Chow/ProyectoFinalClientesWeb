@@ -111,19 +111,22 @@ class FinanceApp {
     }
 
     async init() {
-        //1. Conectar a la BD
+        // 1. Conectar a la BD
         await this.db.connect();
         
         // 2. Inicializar filtro de fecha en el HTML
         const dateInput = document.getElementById('global-month');
         if(dateInput) {
             dateInput.value = this.currentMonth;
+            
+            dateInput.addEventListener('change', (e) => {
+                this.handleDateChange(e.target.value);
+            });
         }
 
-        //Cargar categorias al iniciar
+        // Cargar categorias al iniciar
         this.updateUI();
-        
-        console.log("App Inicializada. Categorias cargadas.");
+        console.log("App Inicializada. Categorias cargadas y filtro activo.");
     }
 
     async updateUI() {

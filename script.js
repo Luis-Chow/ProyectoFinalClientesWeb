@@ -35,7 +35,7 @@ class FinanceDB {
                         const categoryStore = db.transaction('categories', 'readwrite').objectStore('categories');
                         const defaults = ['Alimentación', 'Transporte', 'Ocio', 'Servicios', 'Salud', 'Educación', 'Otros'];
                         defaults.forEach(name => categoryStore.add({ name: name }));
-                        console.log("Categorías por defecto insertadas.");
+                        console.log("Categorias por defecto insertadas.");
                     };
                 }
 
@@ -108,6 +108,7 @@ class FinanceApp {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         this.currentMonth = `${year}-${month}`;
         this.charts = {}; // Almacena instancias de graficos para poder destruirlos al actualizar
+        this.editingTxId = null;
     }
 
     async init() {
@@ -149,8 +150,8 @@ class FinanceApp {
         const selectBudget = document.getElementById('budget-category');
 
         if (list) list.innerHTML = '';
-        if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoría...</option>';
-        if (selectBudget) selectBudget.innerHTML = '<option value="">Categoría...</option>';
+        if (selectTx) selectTx.innerHTML = '<option value="">Seleccionar Categoria...</option>';
+        if (selectBudget) selectBudget.innerHTML = '<option value="">Categoria...</option>';
 
         categories.forEach(cat => {
             // Llenar tabla de gestion
@@ -186,13 +187,13 @@ class FinanceApp {
             await this.db.add('categories', { name });
             nameInput.value = ''; // Limpiar input
             this.updateUI(); // Recargar lista
-            alert('Categoría agregada correctamente');
+            alert('Categoria agregada correctamente');
         }
     }
 
     //3. Eliminar categoria
     async deleteCategory(id) {
-        if(!confirm('¿Eliminar categoría? Se borrarán todas las transacciones asociadas.')) return;
+        if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
 
         //1. Primero obtenemos la categoria para saber su nombre
         const categories = await this.db.getAll('categories');
@@ -213,7 +214,7 @@ class FinanceApp {
         //4. Finalmente borramos la categoria
         await this.db.delete('categories', id);
         
-        alert(`Categoría eliminada junto con ${txsToDelete.length} transacciones.`);
+        alert(`Categoria eliminada junto con ${txsToDelete.length} transacciones.`);
         this.updateUI();
     }
 
@@ -224,17 +225,25 @@ class FinanceApp {
         const allTxs = await this.db.getAll('transactions');
         const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
         
+        // Ordenar por fecha descendente
         const filtered = allTxs
             .filter(t => (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const tbody = document.getElementById('tx-list');
         if(!tbody) return;
+
+        // Limpiamos la tabla antes de llenarla
         tbody.innerHTML = '';
+        
+        // Variable para acumular el HTML (Mejor rendimiento que += directo al DOM)
+        let htmlContent = '';
 
         filtered.forEach(tx => {
             const isIncome = tx.type === 'income';
-            tbody.innerHTML += `
+            
+            // Construimos la fila
+            htmlContent += `
                 <tr>
                     <td>${tx.date}</td>
                     <td><span class="tag ${isIncome ? 'tag-income' : 'tag-expense'}">${isIncome ? 'Ingreso' : 'Egreso'}</span></td>
@@ -243,16 +252,22 @@ class FinanceApp {
                     <td class="${isIncome ? 'text-success' : 'text-danger'} font-bold">
                         ${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}
                     </td>
-                    <td>
-                        <button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})">
+                    <td style="display:flex; gap:5px;">
+                        <button class="btn btn-primary" onclick="app.editTransaction(${tx.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="app.deleteTransaction(${tx.id})" title="Borrar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
             `;
         });
-    }
 
+        // Insertamos todo el HTML de una sola vez
+        tbody.innerHTML = htmlContent;
+    }
+    
     //2. Agregar nueva transaccion
     async addTransaction(e) {
         e.preventDefault();
@@ -262,14 +277,68 @@ class FinanceApp {
         const category = document.getElementById('tx-category').value;
         const desc = document.getElementById('tx-desc').value;
 
-        await this.db.add('transactions', { type, amount, date, category, desc });
-        e.target.reset();
-        document.getElementById('tx-date').valueAsDate = new Date();
-        this.updateUI();
-        alert('Transacción guardada');
+        if (this.editingTxId) {
+            const tx = this.db.db.transaction('transactions', 'readwrite');
+            const store = tx.objectStore('transactions');
+            store.put({ 
+                id: this.editingTxId, // Importante: Mantener el ID
+                type, amount, date, category, desc 
+            });
+            
+            tx.oncomplete = () => {
+                alert('Transacción actualizada');
+                this.editingTxId = null; // Resetear estado
+                document.querySelector('#tx-form button[type="submit"]').innerText = "Guardar";
+                e.target.reset();
+                this.updateUI();
+            };
+        } else {
+            // MODO CREACIÓN (Código original)
+            await this.db.add('transactions', { type, amount, date, category, desc });
+            e.target.reset();
+            document.getElementById('tx-date').valueAsDate = new Date();
+            this.updateUI();
+            alert('Transacción guardada');
+        }
+    }
+    
+    //3. Editar Categoria
+    async editCategory(id) {
+        const categories = await this.db.getAll('categories');
+        const cat = categories.find(c => c.id === id);
+        if (!cat) return;
+
+        const newName = prompt("Nuevo nombre para la categoria:", cat.name);
+        if (newName && newName !== cat.name) {
+            // 1. Actualizar la categoria
+            const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
+            
+            // Update Category Store
+            const catStore = txCat.objectStore('categories');
+            catStore.put({ id: id, name: newName });
+
+            // 2. Actualizar Transacciones asociadas (Cascading Update)
+            const txStore = txCat.objectStore('transactions');
+            const allTxsRequest = txStore.getAll();
+            
+            allTxsRequest.onsuccess = () => {
+                const transactions = allTxsRequest.result;
+                transactions.forEach(t => {
+                    if (t.category === cat.name) {
+                        t.category = newName; // Cambiamos el nombre viejo por el nuevo
+                        txStore.put(t);
+                    }
+                });
+            };
+
+            txCat.oncomplete = () => {
+                alert('Categoria y transacciones actualizadas.');
+                this.updateUI();
+            };
+        }
     }
 
-    //3. Eliminar transaccion
+    //4. Eliminar transaccion
     async deleteTransaction(id) {
         if(confirm('¿Eliminar transacción?')) {
             await this.db.delete('transactions', id);
@@ -351,7 +420,7 @@ class FinanceApp {
 
     //3. Eliminar presupuesto
     async deleteBudget(id) {
-        if(confirm('¿Eliminar presupuesto para esta categoría?')) {
+        if(confirm('¿Eliminar presupuesto para esta categoria?')) {
             await this.db.delete('budgets', id);
             this.updateUI();
         }
@@ -392,7 +461,7 @@ class FinanceApp {
         if (!this.charts) this.charts = {};
         const destroyChart = (id) => { if (this.charts[id]) this.charts[id].destroy(); };
 
-        // 1. Dona (Categorías)
+        // 1. Dona (Categorias)
         if(document.getElementById('chart-categories')) {
             destroyChart('chart-categories');
             this.charts['chart-categories'] = new Chart(document.getElementById('chart-categories'), {
@@ -401,7 +470,7 @@ class FinanceApp {
                     labels: Object.keys(expensesByCat),
                     datasets: [{ data: Object.values(expensesByCat), backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'] }]
                 },
-                options: { plugins: { title: { display: true, text: 'Gastos por Categoría' } }, maintainAspectRatio: false }
+                options: { plugins: { title: { display: true, text: 'Gastos por Categoria' } }, maintainAspectRatio: false }
             });
         }
 
@@ -473,7 +542,7 @@ class FinanceApp {
         const titles = {
             'dashboard': 'Dashboard Principal',
             'transactions': 'Historial de Transacciones',
-            'categories': 'Gestión de Categorías',
+            'categories': 'Gestión de Categorias',
             'budgets': 'Control de Presupuestos'
         };
         const titleEl = document.getElementById('page-title');

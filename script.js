@@ -192,10 +192,29 @@ class FinanceApp {
 
     //3. Eliminar categoria
     async deleteCategory(id) {
-        if(confirm('¿Eliminar categoría?')) {
-            await this.db.delete('categories', id);
-            this.updateUI();
-        }
+        if(!confirm('¿Eliminar categoría? Se borrarán todas las transacciones asociadas.')) return;
+
+        //1. Primero obtenemos la categoria para saber su nombre
+        const categories = await this.db.getAll('categories');
+        const categoryToDelete = categories.find(c => c.id === id);
+
+        if (!categoryToDelete) return;
+
+        //2. Obtenemos todas las transacciones
+        const transactions = await this.db.getAll('transactions');
+
+        //3. Filtramos y borramos las transacciones que tengan ese nombre de categoria
+        const txsToDelete = transactions.filter(t => t.category === categoryToDelete.name);
+        
+        //Usamos Promise.all para esperar a que todas se borren
+        const deletePromises = txsToDelete.map(t => this.db.delete('transactions', t.id));
+        await Promise.all(deletePromises);
+
+        //4. Finalmente borramos la categoria
+        await this.db.delete('categories', id);
+        
+        alert(`Categoría eliminada junto con ${txsToDelete.length} transacciones.`);
+        this.updateUI();
     }
 
     //LOGICA DE TRANSACCIONES

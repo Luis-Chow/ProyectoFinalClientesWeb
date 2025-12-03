@@ -561,6 +561,24 @@ class FinanceApp {
             document.getElementById('kpi-budget-status').innerText = `${budgetStatus.toFixed(1)}%`;
         }
 
+        //Renderizar Transacciones Recientes (ultimas 5) ---
+        const recentTable = document.getElementById('dashboard-recent-tx');
+        if (recentTable) {
+            recentTable.replaceChildren();
+            //Ordenar por fecha desc y tomar 5
+            const recent = [...monthTxs].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            
+            recent.forEach(t => {
+                const row = this.createEl('tr');
+                row.appendChild(this.createEl('td', '', t.date));
+                row.appendChild(this.createEl('td', '', t.category));
+                const tdAmount = this.createEl('td', t.type === 'income' ? 'text-success' : 'text-danger');
+                tdAmount.textContent = `$${t.amount.toFixed(2)}`;
+                row.appendChild(tdAmount);
+                recentTable.appendChild(row);
+            });
+        }
+
         this.renderCharts(monthTxs, expensesByCat, income, expense, budgets, txs);
     }
 

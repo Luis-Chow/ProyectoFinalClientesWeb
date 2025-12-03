@@ -151,15 +151,16 @@ class FinanceApp {
     async renderCategories() {
         const categories = await this.db.getAll('categories');
         
-        // Referencias a elementos del DOM
+        //Referencias a elementos del DOM
         const list = document.getElementById('cat-list');
         const selectTx = document.getElementById('tx-category');
         const selectBudget = document.getElementById('budget-category');
+        const selectFilterCat = document.getElementById('filter-category');
 
-        // Limpieza SEGURA (reemplaza innerHTML = '')
+        //Limpieza SEGURA
         if (list) list.replaceChildren(); 
         
-        // Resetear selects manteniendo la opcion por defecto
+        //Resetear selects
         if (selectTx) {
             selectTx.replaceChildren();
             selectTx.appendChild(this.createEl('option', '', 'Seleccionar Categoria...'));
@@ -168,36 +169,38 @@ class FinanceApp {
             selectBudget.replaceChildren();
             selectBudget.appendChild(this.createEl('option', '', 'Categoria...'));
         }
+        //Resetear el filtro de categorias
+        if (selectFilterCat) {
+            //Guardamos el valor actual para no perder la selección al refrescar
+            const currentValue = selectFilterCat.value; 
+            selectFilterCat.replaceChildren();
+            const allOpt = this.createEl('option', '', 'Todas las Categorias');
+            allOpt.value = 'all';
+            selectFilterCat.appendChild(allOpt);
+            //Restauramos valor si es posible, si no, queda en 'all'
+            setTimeout(() => { selectFilterCat.value = currentValue || 'all'; }, 0);
+        }
 
         categories.forEach(cat => {
-            //Llenar tabla de gestion
+            //Llenar tabla de gestion (Igual que antes)
             if (list) {
                 const row = this.createEl('tr');
-                
-                //Celda Nombre
                 const tdName = this.createEl('td', '', cat.name);
                 row.appendChild(tdName);
 
-                //Celda Acciones
                 const tdActions = this.createEl('td');
-                
-                //Boton Editar
                 const btnEdit = this.createEl('button', 'btn btn-primary');
                 btnEdit.style.marginRight = '5px';
-                btnEdit.onclick = () => this.editCategory(cat.id); // Evento directo
-                const iconEdit = this.createEl('i', 'fas fa-edit');
-                btnEdit.appendChild(iconEdit);
+                btnEdit.onclick = () => this.editCategory(cat.id);
+                btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
 
-                //Boton Borrar
                 const btnDel = this.createEl('button', 'btn btn-danger');
-                btnDel.onclick = () => this.deleteCategory(cat.id); // Evento directo
-                const iconDel = this.createEl('i', 'fas fa-trash');
-                btnDel.appendChild(iconDel);
+                btnDel.onclick = () => this.deleteCategory(cat.id);
+                btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
 
                 tdActions.appendChild(btnEdit);
                 tdActions.appendChild(btnDel);
                 row.appendChild(tdActions);
-
                 list.appendChild(row);
             }
 
@@ -212,10 +215,16 @@ class FinanceApp {
                 opt.value = cat.name;
                 selectBudget.appendChild(opt);
             }
+            //Llenar el filtro de la tabla
+            if (selectFilterCat) {
+                const opt = this.createEl('option', '', cat.name);
+                opt.value = cat.name;
+                selectFilterCat.appendChild(opt);
+            }
         });
     }
 
-    //2. Agregar nueva categoria
+    //2. Agregar categoria
     async addCategory(e) {
         e.preventDefault(); // Evita que se recargue la pagina
         const nameInput = document.getElementById('cat-name');
@@ -230,170 +239,6 @@ class FinanceApp {
     }
 
     //3. Editar categoria
-    async editCategory(id) {
-        const categories = await this.db.getAll('categories');
-        const cat = categories.find(c => c.id === id);
-        if (!cat) return;
-
-        const newName = prompt("Nuevo nombre para la categoria:", cat.name);
-        if (newName && newName !== cat.name) {
-            //1. Actualizar la categoria
-            const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
-            
-            //actualizar Category Store
-            const catStore = txCat.objectStore('categories');
-            catStore.put({ id: id, name: newName });
-
-            //2. Actualizar Transacciones asociadas
-            const txStore = txCat.objectStore('transactions');
-            const allTxsRequest = txStore.getAll();
-            
-            allTxsRequest.onsuccess = () => {
-                const transactions = allTxsRequest.result;
-                transactions.forEach(t => {
-                    if (t.category === cat.name) {
-                        t.category = newName; // Cambiamos el nombre viejo por el nuevo
-                        txStore.put(t);
-                    }
-                });
-            };
-
-            txCat.oncomplete = () => {
-                alert('Categoria y transacciones actualizadas.');
-                this.updateUI();
-            };
-        }
-    } 
-
-    //4. Eliminar categoria
-    async deleteCategory(id) {
-        if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
-
-        //1. Primero obtenemos la categoria para saber su nombre
-        const categories = await this.db.getAll('categories');
-        const categoryToDelete = categories.find(c => c.id === id);
-
-        if (!categoryToDelete) return;
-
-        //2. Obtenemos todas las transacciones
-        const transactions = await this.db.getAll('transactions');
-
-        //3. Filtramos y borramos las transacciones que tengan ese nombre de categoria
-        const txsToDelete = transactions.filter(t => t.category === categoryToDelete.name);
-        
-        //Usamos Promise.all para esperar a que todas se borren
-        const deletePromises = txsToDelete.map(t => this.db.delete('transactions', t.id));
-        await Promise.all(deletePromises);
-
-        //4. Finalmente borramos la categoria
-        await this.db.delete('categories', id);
-        
-        alert(`Categoria eliminada junto con ${txsToDelete.length} transacciones.`);
-        this.updateUI();
-    }
-
-    //LOGICA DE TRANSACCIONES
-
-    //1. Renderizar la tabla de transacciones
-    async renderTransactions() {
-        const allTxs = await this.db.getAll('transactions');
-        const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
-        
-        const filtered = allTxs
-            .filter(t => (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search))
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const tbody = document.getElementById('tx-list');
-        if(!tbody) return;
-
-        //Limpieza segura
-        tbody.replaceChildren();
-
-        filtered.forEach(tx => {
-            const isIncome = tx.type === 'income';
-            const row = this.createEl('tr');
-
-            //Fecha
-            row.appendChild(this.createEl('td', '', tx.date));
-
-            //Tipo 
-            const tdType = this.createEl('td');
-            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Ingreso' : 'Egreso');
-            tdType.appendChild(spanType);
-            row.appendChild(tdType);
-
-            //Categoria
-            row.appendChild(this.createEl('td', '', tx.category));
-
-            //Descripcion (SEGURIDAD CRiTICA AQUi)
-            row.appendChild(this.createEl('td', '', tx.desc || '-'));
-
-            //Monto
-            const tdAmount = this.createEl('td', isIncome ? 'text-success font-bold' : 'text-danger font-bold');
-            tdAmount.textContent = `${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}`;
-            row.appendChild(tdAmount);
-
-            //Acciones
-            const tdActions = this.createEl('td');
-            tdActions.style.display = 'flex';
-            tdActions.style.gap = '5px';
-
-            //Boton Editar
-            const btnEdit = this.createEl('button', 'btn btn-primary');
-            btnEdit.title = 'Editar';
-            btnEdit.onclick = () => this.editTransaction(tx.id); // Vinculacion directa
-            btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
-            
-            //Boton Borrar
-            const btnDel = this.createEl('button', 'btn btn-danger');
-            btnDel.title = 'Borrar';
-            btnDel.onclick = () => this.deleteTransaction(tx.id); // Vinculacion directa
-            btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
-
-            tdActions.appendChild(btnEdit);
-            tdActions.appendChild(btnDel);
-            row.appendChild(tdActions);
-
-            // Agregar fila a la tabla
-            tbody.appendChild(row);
-        });
-    }
-
-    //2. Agregar nueva transaccion
-    async addTransaction(e) {
-        e.preventDefault();
-        const type = document.getElementById('tx-type').value;
-        const amount = parseFloat(document.getElementById('tx-amount').value);
-        const date = document.getElementById('tx-date').value;
-        const category = document.getElementById('tx-category').value;
-        const desc = document.getElementById('tx-desc').value;
-
-        if (this.editingTxId) {
-            const tx = this.db.db.transaction('transactions', 'readwrite');
-            const store = tx.objectStore('transactions');
-            store.put({ 
-                id: this.editingTxId, // Importante: Mantener el ID
-                type, amount, date, category, desc 
-            });
-            
-            tx.oncomplete = () => {
-                alert('Transaccion actualizada');
-                this.editingTxId = null; // Resetear estado
-                document.querySelector('#tx-form button[type="submit"]').innerText = "Guardar";
-                e.target.reset();
-                this.updateUI();
-            };
-        } else {
-            // MODO CREACIoN (Codigo original)
-            await this.db.add('transactions', { type, amount, date, category, desc });
-            e.target.reset();
-            document.getElementById('tx-date').valueAsDate = new Date();
-            this.updateUI();
-            alert('Transaccion guardada');
-        }
-    }
-    
-    //3. Editar Categoria
     async editCategory(id) {
         const categories = await this.db.getAll('categories');
         const cat = categories.find(c => c.id === id);
@@ -429,6 +274,163 @@ class FinanceApp {
         }
     }
 
+    //4. Eliminar categoria
+    async deleteCategory(id) {
+        if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
+
+        //1. Primero obtenemos la categoria para saber su nombre
+        const categories = await this.db.getAll('categories');
+        const categoryToDelete = categories.find(c => c.id === id);
+
+        if (!categoryToDelete) return;
+
+        //2. Obtenemos todas las transacciones
+        const transactions = await this.db.getAll('transactions');
+
+        //3. Filtramos y borramos las transacciones que tengan ese nombre de categoria
+        const txsToDelete = transactions.filter(t => t.category === categoryToDelete.name);
+        
+        //Usamos Promise.all para esperar a que todas se borren
+        const deletePromises = txsToDelete.map(t => this.db.delete('transactions', t.id));
+        await Promise.all(deletePromises);
+
+        //4. Finalmente borramos la categoria
+        await this.db.delete('categories', id);
+        
+        alert(`Categoria eliminada junto con ${txsToDelete.length} transacciones.`);
+        this.updateUI();
+    }
+
+    //LOGICA DE TRANSACCIONES
+
+    //1. Renderizar la tabla de transacciones
+    async renderTransactions() {
+        const allTxs = await this.db.getAll('transactions');
+        const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
+        
+        //Obtener valores de los filtros
+        const typeFilter = document.getElementById('filter-type')?.value || 'all';
+        const categoryFilter = document.getElementById('filter-category')?.value || 'all';
+        
+        const filtered = allTxs
+            .filter(t => {
+                //1. Coincidencia por texto (Descripción o Categoria)
+                const matchesSearch = (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search);
+                
+                //2. Coincidencia por Tipo (Ingreso/Egreso)
+                const matchesType = typeFilter === 'all' || t.type === typeFilter;
+
+                //3. Coincidencia por Categoria
+                const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
+
+                //TIENEN QUE CUMPLIRSE LAS 3 CONDICIONES
+                return matchesSearch && matchesType && matchesCategory;
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const tbody = document.getElementById('tx-list');
+        if(!tbody) return;
+
+        // Limpieza segura
+        tbody.replaceChildren();
+
+        filtered.forEach(tx => {
+            const isIncome = tx.type === 'income';
+            const row = this.createEl('tr');
+
+            //Fecha
+            row.appendChild(this.createEl('td', '', tx.date));
+
+            //Tipo 
+            const tdType = this.createEl('td');
+            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Ingreso' : 'Egreso');
+            tdType.appendChild(spanType);
+            row.appendChild(tdType);
+            //Categoria y Descripcion
+            row.appendChild(this.createEl('td', '', tx.category));
+            row.appendChild(this.createEl('td', '', tx.desc || '-'));
+
+            //Monto
+            const tdAmount = this.createEl('td', isIncome ? 'text-success font-bold' : 'text-danger font-bold');
+            tdAmount.textContent = `${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}`;
+            row.appendChild(tdAmount);
+            //Acciones (Editar/Borrar)
+            const tdActions = this.createEl('td');
+            tdActions.style.display = 'flex';
+            tdActions.style.gap = '5px';
+
+            const btnEdit = this.createEl('button', 'btn btn-primary');
+            btnEdit.title = 'Editar';
+            btnEdit.onclick = () => this.editTransaction(tx.id);
+            btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
+            
+            const btnDel = this.createEl('button', 'btn btn-danger');
+            btnDel.title = 'Borrar';
+            btnDel.onclick = () => this.deleteTransaction(tx.id);
+            btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
+
+            tdActions.appendChild(btnEdit);
+            tdActions.appendChild(btnDel);
+            row.appendChild(tdActions);
+
+            tbody.appendChild(row);
+        });
+    }
+
+    //2. Agregar nueva transaccion
+    async addTransaction(e) {
+        e.preventDefault();
+        const type = document.getElementById('tx-type').value;
+        const amount = parseFloat(document.getElementById('tx-amount').value);
+        const date = document.getElementById('tx-date').value;
+        const category = document.getElementById('tx-category').value;
+        const desc = document.getElementById('tx-desc').value;
+
+        if (this.editingTxId) {
+            const tx = this.db.db.transaction('transactions', 'readwrite');
+            const store = tx.objectStore('transactions');
+            store.put({ 
+                id: this.editingTxId, //Importante: Mantener el ID
+                type, amount, date, category, desc 
+            });
+            
+            tx.oncomplete = () => {
+                alert('Transaccion actualizada');
+                this.editingTxId = null; //Resetear estado
+                document.querySelector('#tx-form button[type="submit"]').innerText = "Guardar";
+                e.target.reset();
+                this.updateUI();
+            };
+        } else {
+            //MODO CREACION
+            await this.db.add('transactions', { type, amount, date, category, desc });
+            e.target.reset();
+            document.getElementById('tx-date').valueAsDate = new Date();
+            this.updateUI();
+            alert('Transaccion guardada');
+        }
+    }
+    //3. Editar transaccion
+    async editTransaction(id) {
+        const txs = await this.db.getAll('transactions');
+        const tx = txs.find(t => t.id === id);
+        if (!tx) return;
+
+        //Llenar el formulario
+        document.getElementById('tx-type').value = tx.type;
+        document.getElementById('tx-amount').value = tx.amount;
+        document.getElementById('tx-date').value = tx.date;
+        document.getElementById('tx-category').value = tx.category;
+        document.getElementById('tx-desc').value = tx.desc;
+
+        //Cambiar estado a edición
+        this.editingTxId = id;
+        document.querySelector('#tx-form button[type="submit"]').innerText = "Actualizar";
+        
+        //Scrollear hacia arriba para ver el form
+        document.getElementById('tx-form').scrollIntoView({behavior: 'smooth'});
+    }
+
     //4. Eliminar transaccion
     async deleteTransaction(id) {
         if(confirm('¿Eliminar transaccion?')) {
@@ -445,10 +447,10 @@ class FinanceApp {
         const category = document.getElementById('budget-category').value;
         const amount = parseFloat(document.getElementById('budget-amount').value);
         
-        // ID unico compuesto: "2023-10-Alimentacion"
+        //ID unico compuesto: "2023-10-Alimentacion"
         const id = `${this.currentMonth}-${category}`;
         
-        // Usamos .put en lugar de .add para sobrescribir si ya existe
+        //Usamos .put en lugar de .add para sobrescribir si ya existe
         const tx = this.db.db.transaction('budgets', 'readwrite');
         tx.objectStore('budgets').put({ id, month: this.currentMonth, category, limit: amount });
         
@@ -559,7 +561,6 @@ class FinanceApp {
             const totalBudget = monthBudgets.reduce((acc, b) => acc + b.limit, 0);
             const budgetStatus = totalBudget > 0 ? (expense / totalBudget) * 100 : 0;
             document.getElementById('kpi-budget-status').innerText = `${budgetStatus.toFixed(1)}%`;
-        }
 
         //Renderizar Transacciones Recientes (ultimas 5) ---
         const recentTable = document.getElementById('dashboard-recent-tx');
@@ -578,6 +579,7 @@ class FinanceApp {
                 recentTable.appendChild(row);
             });
         }
+        }
 
         this.renderCharts(monthTxs, expensesByCat, income, expense, budgets, txs);
     }
@@ -586,7 +588,7 @@ class FinanceApp {
         if (!this.charts) this.charts = {};
         const destroyChart = (id) => { if (this.charts[id]) this.charts[id].destroy(); };
 
-        // 1. Dona (Categorias)
+        //1. Dona (Categorias)
         if(document.getElementById('chart-categories')) {
             destroyChart('chart-categories');
             this.charts['chart-categories'] = new Chart(document.getElementById('chart-categories'), {
@@ -599,7 +601,7 @@ class FinanceApp {
             });
         }
 
-        // 2. Barras (Balance)
+        //2. Barras (Balance)
         if(document.getElementById('chart-distribution')) {
             destroyChart('chart-distribution');
             this.charts['chart-distribution'] = new Chart(document.getElementById('chart-distribution'), {
@@ -609,7 +611,7 @@ class FinanceApp {
             });
         }
         
-        // 3. Linea (Tendencia)
+        //3. Linea (Tendencia)
         const history = {};
         allTxs.forEach(t => {
             const m = t.date.slice(0, 7);
@@ -627,7 +629,7 @@ class FinanceApp {
             });
         }
 
-        // 4. Barras Agrupadas (Presupuesto)
+        //4. Barras Agrupadas (Presupuesto)
         const monthBudgets = allBudgets.filter(b => b.month === this.currentMonth);
         const labels = monthBudgets.map(b => b.category);
         
@@ -647,7 +649,7 @@ class FinanceApp {
         }
     }
 
-    // ---NAVEGACION---
+    //NAVEGACION
 
     navigate(sectionId) {
         //Ocultar todas las secciones

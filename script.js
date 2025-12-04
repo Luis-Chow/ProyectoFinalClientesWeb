@@ -112,10 +112,10 @@ class FinanceApp {
     }
 
     async init() {
-        // 1. Conectar a la BD
+        //Conectar a la BD
         await this.db.connect();
         
-        // 2. Inicializar filtro de fecha en el HTML
+        //Inicializar filtro de fecha en el HTML
         const dateInput = document.getElementById('global-month');
         if(dateInput) {
             dateInput.value = this.currentMonth;
@@ -125,13 +125,13 @@ class FinanceApp {
             });
         }
 
-        // Cargar categorias al iniciar
+        //Cargar categorias al iniciar
         this.updateUI();
         console.log("App Inicializada. Categorias cargadas y filtro activo.");
     }
 
     async updateUI() {
-        // Funcion central para actualizar toda la interfaz
+        //Funcion central para actualizar toda la interfaz
         await this.renderCategories();
         await this.renderTransactions();
         await this.renderBudgets();
@@ -141,7 +141,7 @@ class FinanceApp {
     createEl(tag, className = '', text = '') {
         const el = document.createElement(tag);
         if (className) el.className = className;
-        if (text) el.textContent = text; // textContent es SEGURO contra XSS
+        if (text) el.textContent = text;
         return el;
     }
     
@@ -246,14 +246,14 @@ class FinanceApp {
 
         const newName = prompt("Nuevo nombre para la categoria:", cat.name);
         if (newName && newName !== cat.name) {
-            // 1. Actualizar la categoria
+            //Actualizar la categoria
             const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
             
-            // Update Category Store
+            //Actualizar Category Store
             const catStore = txCat.objectStore('categories');
             catStore.put({ id: id, name: newName });
 
-            // 2. Actualizar Transacciones asociadas (Cascading Update)
+            //Actualizar Transacciones asociadas
             const txStore = txCat.objectStore('transactions');
             const allTxsRequest = txStore.getAll();
             
@@ -261,7 +261,7 @@ class FinanceApp {
                 const transactions = allTxsRequest.result;
                 transactions.forEach(t => {
                     if (t.category === cat.name) {
-                        t.category = newName; // Cambiamos el nombre viejo por el nuevo
+                        t.category = newName; //Cambiamos el nombre viejo por el nuevo
                         txStore.put(t);
                     }
                 });
@@ -278,16 +278,16 @@ class FinanceApp {
     async deleteCategory(id) {
         if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
 
-        //1. Primero obtenemos la categoria para saber su nombre
+        //Obtenemos la categoria para saber su nombre
         const categories = await this.db.getAll('categories');
         const categoryToDelete = categories.find(c => c.id === id);
 
         if (!categoryToDelete) return;
 
-        //2. Obtenemos todas las transacciones
+        //Obtenemos todas las transacciones
         const transactions = await this.db.getAll('transactions');
 
-        //3. Filtramos y borramos las transacciones que tengan ese nombre de categoria
+        //Filtramos y borramos las transacciones que tengan ese nombre de categoria
         const txsToDelete = transactions.filter(t => t.category === categoryToDelete.name);
         
         //Usamos Promise.all para esperar a que todas se borren
@@ -512,7 +512,7 @@ class FinanceApp {
             tdStatus.appendChild(spanStatus);
             row.appendChild(tdStatus);
 
-            // Accion (Borrar)
+            //Accion (Borrar)
             const tdAction = this.createEl('td');
             const btnDel = this.createEl('button', 'btn btn-danger');
             btnDel.style.padding = '0.25rem 0.5rem';

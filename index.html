@@ -3,44 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Finanzas Personales</title>
+    <title>GeoFinance - Hollow Knight Style</title>
     
-    <!--Importamos Chart.js desde CDN-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!--Chart.js-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!--Iconos para mejorar la UI-->
+    <!--Iconos-->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!--Vinculamos nuestro CSS-->
+    <!--CSS-->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <!--Fondo de particulas o atmosfera-->
+    <div class="atmosphere"></div>
+
     <!--Navegacion Lateral-->
     <nav class="sidebar">
         <div class="brand">
-            <i class="fas fa-wallet"></i>
-            <span>MiFinanza</span>
+            <i class="fas fa-ghost"></i>
+            <span>GeoKeeper</span>
         </div>
         <ul class="nav-links">
             <li class="nav-item">
                 <button class="nav-btn active" onclick="app.navigate('dashboard')">
-                    <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+                    <i class="fas fa-map"></i> <span>Mapa (Dashboard)</span>
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('transactions')">
-                    <i class="fas fa-exchange-alt"></i> <span>Transacciones</span>
+                    <i class="fas fa-scroll"></i> <span>Registros</span>
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('categories')">
-                    <i class="fas fa-tags"></i> <span>Categorias</span>
+                    <i class="fas fa-bookmark"></i> <span>Categorías</span>
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('budgets')">
-                    <i class="fas fa-bullseye"></i> <span>Presupuestos</span>
+                    <i class="fas fa-gem"></i> <span>Amuletos (Presupuesto)</span>
                 </button>
             </li>
         </ul>
@@ -49,9 +56,8 @@
     <!--Contenido Principal-->
     <main class="main-content">
         
-        <!--Header Comun-->
         <header class="header">
-            <h2 id="page-title">Dashboard</h2>
+            <h2 id="page-title">Mapa del Reino</h2>
             <div class="date-filter">
                 <input type="month" id="global-month">
             </div>
@@ -61,33 +67,33 @@
         <section id="dashboard" class="section active">
             <!--KPIs-->
             <div class="kpi-grid">
-                <div class="card">
-                    <div class="kpi-title">Ingresos del Mes</div>
-                    <div class="kpi-value text-success" id="kpi-income">$0.00</div>
+                <div class="card soul-border">
+                    <div class="kpi-title">Geos Recolectados (Ingresos)</div>
+                    <div class="kpi-value text-soul" id="kpi-income">$0.00</div>
                 </div>
-                <div class="card">
-                    <div class="kpi-title">Gastos del Mes</div>
-                    <div class="kpi-value text-danger" id="kpi-expense">$0.00</div>
+                <div class="card void-border">
+                    <div class="kpi-title">Geos Perdidos (Gastos)</div>
+                    <div class="kpi-value text-void" id="kpi-expense">$0.00</div>
                 </div>
-                <div class="card">
-                    <div class="kpi-title">Balance</div>
+                <div class="card crystal-border">
+                    <div class="kpi-title">Balance de Alma</div>
                     <div class="kpi-value" id="kpi-balance">$0.00</div>
                 </div>
-                <div class="card">
-                    <div class="kpi-title">Ejecución Presupuestal</div>
+                <div class="card infection-border">
+                    <div class="kpi-title">Nivel de Infección (Gasto)</div>
                     <div class="kpi-value" id="kpi-budget-status">0%</div>
                 </div>
             </div>
 
             <!--Transacciones Recientes-->
-            <div class="card" style="margin-top: 2rem; margin-bottom: 2rem;">
-                <h3>Últimas Transacciones</h3>
+            <div class="card ornate-card" style="margin-top: 2rem; margin-bottom: 2rem;">
+                <h3>Últimos Movimientos en Hallownest</h3>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Categoría</th>
-                            <th>Monto</th>
+                            <th>Geos</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-recent-tx"></tbody>
@@ -105,39 +111,35 @@
 
         <!--VISTA: TRANSACCIONES-->
         <section id="transactions" class="section">
-            <div class="card form-group">
-                <h3>Nueva Transacción</h3>
-                <form id="tx-form" onsubmit="app.addTransaction(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 1rem;">
+            <div class="card form-group ornate-card">
+                <h3>Inscribir en el Diario</h3>
+                <form id="tx-form" onsubmit="app.addTransaction(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 1rem;">
                     <select id="tx-type" class="form-control" required>
-                        <option value="expense">Egreso</option>
-                        <option value="income">Ingreso</option>
+                        <option value="expense">Daño (Egreso)</option>
+                        <option value="income">Alma (Ingreso)</option>
                     </select>
-                    <input type="number" id="tx-amount" placeholder="Monto" class="form-control" step="0.01" min="0" required>
+                    <input type="number" id="tx-amount" placeholder="Cantidad de Geos" class="form-control" step="0.01" min="0" required>
                     <input type="date" id="tx-date" class="form-control" required>
                     <select id="tx-category" class="form-control" required>
-                        <option value="">Seleccionar Categoría...</option>
+                        <option value="">Tipo de Enemigo...</option>
                     </select>
-                    <input type="text" id="tx-desc" placeholder="Descripción" class="form-control">
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <input type="text" id="tx-desc" placeholder="Notas del Cazador..." class="form-control">
+                    <button type="submit" class="btn btn-primary">Grabar</button>
                 </form>
             </div>
 
-            <div class="card">
-                <!--Filtros Avanzados-->
+            <div class="card ornate-card">
                 <div style="display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <!--Buscador General-->
-                    <input type="text" id="search-tx" placeholder="Buscar por descripción..." class="form-control" style="margin-bottom: 0; flex: 2; min-width: 200px;" onkeyup="app.renderTransactions()">
+                    <input type="text" id="search-tx" placeholder="Buscar en el diario..." class="form-control" style="margin-bottom: 0; flex: 2; min-width: 200px;" onkeyup="app.renderTransactions()">
                     
-                    <!--Filtro Tipo-->
                     <select id="filter-type" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
-                        <option value="all">Todos los Tipos</option>
-                        <option value="income">Ingresos</option>
-                        <option value="expense">Egresos</option>
+                        <option value="all">Todo</option>
+                        <option value="income">Alma</option>
+                        <option value="expense">Daño</option>
                     </select>
 
-                    <!--Filtro Categoria-->
                     <select id="filter-category" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
-                        <option value="all">Todas las Categorías</option>
+                        <option value="all">Todas las Clases</option>
                     </select>
                 </div>
                 <div style="overflow-x: auto;">
@@ -147,9 +149,9 @@
                                 <th>Fecha</th>
                                 <th>Tipo</th>
                                 <th>Categoría</th>
-                                <th>Descripción</th>
-                                <th>Monto</th>
-                                <th>Acción</th>
+                                <th>Notas</th>
+                                <th>Geos</th>
+                                <th>Destino</th>
                             </tr>
                         </thead>
                         <tbody id="tx-list"></tbody>
@@ -160,53 +162,50 @@
 
         <!--VISTA: CATEGORIAS-->
         <section id="categories" class="section">
-            <div class="card" style="margin-bottom: 1rem;">
-                <h3>Gestionar Categorias</h3>
-                <!--Evento onsubmit para agregar categoria-->
+            <div class="card ornate-card" style="margin-bottom: 1rem;">
+                <h3>Nuevas Zonas</h3>
                 <form onsubmit="app.addCategory(event)" style="display: flex; gap: 10px; margin-top: 1rem;">
-                    <input type="text" id="cat-name" placeholder="Nombre de categoria" class="form-control" required>
-                    <button type="submit" class="btn btn-primary">Agregar</button>
+                    <input type="text" id="cat-name" placeholder="Nombre de la zona..." class="form-control" required>
+                    <button type="submit" class="btn btn-primary">Descubrir</button>
                 </form>
             </div>
             
-            <div class="card">
+            <div class="card ornate-card">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
+                            <th>Zona</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="cat-list">
-                        <!--La lista se llenara con JS-->
-                    </tbody>
+                    <tbody id="cat-list"></tbody>
                 </table>
             </div>
         </section>
 
         <!--VISTA: PRESUPUESTOS-->
         <section id="budgets" class="section">
-            <div class="card" style="margin-bottom: 1rem;">
-                <h3>Configurar Presupuesto Mensual</h3>
-                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Asigna un límite de gasto para el mes seleccionado arriba.</p>
+            <div class="card ornate-card" style="margin-bottom: 1rem;">
+                <h3>Límites de Muescas</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Define tu capacidad máxima para este ciclo.</p>
                 <form onsubmit="app.saveBudget(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                     <select id="budget-category" class="form-control" required>
                         <option value="">Cargando...</option>
                     </select>
-                    <input type="number" id="budget-amount" placeholder="Límite Mensual" class="form-control" required>
-                    <button type="submit" class="btn btn-primary">Establecer Límite</button>
+                    <input type="number" id="budget-amount" placeholder="Límite de Geos" class="form-control" required>
+                    <button type="submit" class="btn btn-primary">Equipar</button>
                 </form>
             </div>
             
-            <div class="card">
-                <h3>Estado de Presupuestos (Mes Actual)</h3>
+            <div class="card ornate-card">
+                <h3>Estado de Amuletos (Mes Actual)</h3>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Categoría</th>
-                            <th>Presupuesto</th>
-                            <th>Gasto Real</th>
-                            <th>Diferencia</th>
+                            <th>Límite</th>
+                            <th>Usado</th>
+                            <th>Restante</th>
                             <th>Estado</th>
                             <th>Acción</th>
                         </tr>
@@ -218,7 +217,6 @@
 
     </main>
 
-    <!--Vinculamos nuestro js-->
     <script src="script.js"></script>
 </body>
 </html>

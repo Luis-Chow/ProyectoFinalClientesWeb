@@ -35,14 +35,11 @@ class FinanceDB {
                         const categoryStore = db.transaction('categories', 'readwrite').objectStore('categories');
                         const defaults = ['Alimentacion', 'Transporte', 'Ocio', 'Servicios', 'Salud', 'Educacion', 'Otros'];
                         defaults.forEach(name => categoryStore.add({ name: name }));
-                        console.log("Categorias por defecto insertadas.");
-                    };
                 }
 
                 // 2. Store: Transacciones
                 if (!db.objectStoreNames.contains('transactions')) {
                     const txStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                    // Creamos indices para poder buscar rapido por fecha o tipo
                     txStore.createIndex('date', 'date', { unique: false });
                     txStore.createIndex('type', 'type', { unique: false });
                 }
@@ -127,7 +124,6 @@ class FinanceApp {
 
         //Cargar categorias al iniciar
         this.updateUI();
-        console.log("App Inicializada. Categorias cargadas y filtro activo.");
     }
 
     async updateUI() {
@@ -431,7 +427,6 @@ class FinanceApp {
         document.getElementById('tx-form').scrollIntoView({behavior: 'smooth'});
     }
 
-    //4. Eliminar transaccion
     async deleteTransaction(id) {
         if(confirm('¿Eliminar transaccion?')) {
             await this.db.delete('transactions', id);
@@ -568,7 +563,6 @@ class FinanceApp {
             recentTable.replaceChildren();
             //Ordenar por fecha desc y tomar 5
             const recent = [...monthTxs].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-            
             recent.forEach(t => {
                 const row = this.createEl('tr');
                 row.appendChild(this.createEl('td', '', t.date));

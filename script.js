@@ -4,12 +4,12 @@
  */
 class FinanceDB {
     constructor() {
-        this.dbName = 'FinanceAppDB'; // Nombre de la BD en el navegador
+        this.dbName = 'FinanceAppDB'; //Nombre de la BD en el navegador
         this.dbVersion = 1;
         this.db = null;
     }
     
-    // Inicializa la conexion y crea las tablas si no existen
+    //Inicializa la conexion y crea las tablas si no existen
     async connect() {
         return new Promise((resolve, reject) => {
             console.log("Intentando conectar a la Base de Datos...");
@@ -20,13 +20,13 @@ class FinanceDB {
                 reject("Error opening DB");
             };
 
-            // Este evento corre solo la primera vez o cuando cambiamos la version
+            //Este evento corre solo la primera vez o cuando cambiamos la version
             request.onupgradeneeded = (event) => {
                 console.log("Configurando tablas (Object Stores)...");
                 const db = event.target.result;
                 
-                // 1. Store: Categorias
-                // keyPath: 'id' significa que cada categoria tendra un ID unico automatico
+                //1. Store: Categorias
+                //keyPath: 'id' significa que cada categoria tendra un ID unico automatico
                 if (!db.objectStoreNames.contains('categories')) {
                     const catStore = db.createObjectStore('categories', { keyPath: 'id', autoIncrement: true });
                     
@@ -35,17 +35,18 @@ class FinanceDB {
                         const categoryStore = db.transaction('categories', 'readwrite').objectStore('categories');
                         const defaults = ['Alimentacion', 'Transporte', 'Ocio', 'Servicios', 'Salud', 'Educacion', 'Otros'];
                         defaults.forEach(name => categoryStore.add({ name: name }));
+                    };
                 }
 
-                // 2. Store: Transacciones
+                //2. Store: Transacciones
                 if (!db.objectStoreNames.contains('transactions')) {
                     const txStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                     txStore.createIndex('date', 'date', { unique: false });
                     txStore.createIndex('type', 'type', { unique: false });
                 }
 
-                // 3. Store: Presupuestos 
-                // keyPath: 'id' manual (ej: "2023-10-Alimentacion")
+                //3. Store: Presupuestos 
+                //keyPath: 'id' manual (ej: "2023-10-Alimentacion")
                 if (!db.objectStoreNames.contains('budgets')) {
                     db.createObjectStore('budgets', { keyPath: 'id' });
                 }
@@ -99,13 +100,17 @@ class FinanceDB {
 class FinanceApp {
     constructor() {
         this.db = new FinanceDB();
-        // Definimos el mes actual
+        //Definimos el mes actual
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         this.currentMonth = `${year}-${month}`;
-        this.charts = {}; // Almacena instancias de graficos para poder destruirlos al actualizar
+        this.charts = {}; 
         this.editingTxId = null;
+        //Texto blanco para los graficos
+        Chart.defaults.color = '#ffffff'; 
+        Chart.defaults.borderColor = '#30363d';
+        this.colors = ['#a5d6ff', '#ffa657', '#d2a8ff', '#7ee787', '#f0f6fc']; 
     }
 
     async init() {
@@ -116,12 +121,10 @@ class FinanceApp {
         const dateInput = document.getElementById('global-month');
         if(dateInput) {
             dateInput.value = this.currentMonth;
-            
             dateInput.addEventListener('change', (e) => {
                 this.handleDateChange(e.target.value);
             });
         }
-
         //Cargar categorias al iniciar
         this.updateUI();
     }
@@ -141,12 +144,12 @@ class FinanceApp {
         return el;
     }
     
-    //LOGICA DE CATEGORIAS
+    //CATEGORIAS
 
-    //1. Renderizar la tabla de categorias
+    //Renderizar categorias
     async renderCategories() {
         const categories = await this.db.getAll('categories');
-        
+
         //Referencias a elementos del DOM
         const list = document.getElementById('cat-list');
         const selectTx = document.getElementById('tx-category');
@@ -159,26 +162,27 @@ class FinanceApp {
         //Resetear selects
         if (selectTx) {
             selectTx.replaceChildren();
-            selectTx.appendChild(this.createEl('option', '', 'Seleccionar Categoria...'));
+            selectTx.appendChild(this.createEl('option', '', 'Seleccionar...'));
         }
         if (selectBudget) {
             selectBudget.replaceChildren();
-            selectBudget.appendChild(this.createEl('option', '', 'Categoria...'));
+            selectBudget.appendChild(this.createEl('option', '', 'Seleccionar...'));
         }
+        
+        let currentFilterVal = 'all';
+
         //Resetear el filtro de categorias
         if (selectFilterCat) {
             //Guardamos el valor actual para no perder la selección al refrescar
-            const currentValue = selectFilterCat.value; 
+            currentFilterVal = selectFilterCat.value;
             selectFilterCat.replaceChildren();
-            const allOpt = this.createEl('option', '', 'Todas las Categorias');
+            const allOpt = this.createEl('option', '', 'Todas las Clases');
             allOpt.value = 'all';
             selectFilterCat.appendChild(allOpt);
-            //Restauramos valor si es posible, si no, queda en 'all'
-            setTimeout(() => { selectFilterCat.value = currentValue || 'all'; }, 0);
         }
 
         categories.forEach(cat => {
-            //Llenar tabla de gestion (Igual que antes)
+            //Llenar tabla de gestion
             if (list) {
                 const row = this.createEl('tr');
                 const tdName = this.createEl('td', '', cat.name);
@@ -218,37 +222,36 @@ class FinanceApp {
                 selectFilterCat.appendChild(opt);
             }
         });
+
+        if (selectFilterCat) selectFilterCat.value = currentFilterVal;
     }
 
-    //2. Agregar categoria
+    //Agregar categoria
     async addCategory(e) {
-        e.preventDefault(); // Evita que se recargue la pagina
+        e.preventDefault(); //Evita que se recargue la pagina
         const nameInput = document.getElementById('cat-name');
         const name = nameInput.value;
-        
         if(name) {
             await this.db.add('categories', { name });
-            nameInput.value = ''; // Limpiar input
-            this.updateUI(); // Recargar lista
-            alert('Categoria agregada correctamente');
+            nameInput.value = '';  //Limpiar input
+            this.updateUI(); //Recargar lista
+            alert('Nueva zona descubierta.');
         }
     }
 
-    //3. Editar categoria
+    //Editar categoria
     async editCategory(id) {
         const categories = await this.db.getAll('categories');
         const cat = categories.find(c => c.id === id);
         if (!cat) return;
 
-        const newName = prompt("Nuevo nombre para la categoria:", cat.name);
+        const newName = prompt("Renombrar zona:", cat.name);
         if (newName && newName !== cat.name) {
             //Actualizar la categoria
             const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
-            
             //Actualizar Category Store
             const catStore = txCat.objectStore('categories');
             catStore.put({ id: id, name: newName });
-
             //Actualizar Transacciones asociadas
             const txStore = txCat.objectStore('transactions');
             const allTxsRequest = txStore.getAll();
@@ -264,61 +267,48 @@ class FinanceApp {
             };
 
             txCat.oncomplete = () => {
-                alert('Categoria y transacciones actualizadas.');
                 this.updateUI();
             };
         }
     }
 
-    //4. Eliminar categoria
+    //Eliminar categoria
     async deleteCategory(id) {
-        if(!confirm('¿Eliminar categoria? Se borrarán todas las transacciones asociadas.')) return;
-
+        if(!confirm('¿Olvidar zona? Se perderán todos los registros asociados.')) return;
         //Obtenemos la categoria para saber su nombre
         const categories = await this.db.getAll('categories');
         const categoryToDelete = categories.find(c => c.id === id);
-
         if (!categoryToDelete) return;
-
         //Obtenemos todas las transacciones
         const transactions = await this.db.getAll('transactions');
-
         //Filtramos y borramos las transacciones que tengan ese nombre de categoria
         const txsToDelete = transactions.filter(t => t.category === categoryToDelete.name);
-        
         //Usamos Promise.all para esperar a que todas se borren
         const deletePromises = txsToDelete.map(t => this.db.delete('transactions', t.id));
         await Promise.all(deletePromises);
-
-        //4. Finalmente borramos la categoria
+        //Finalmente borramos la categoria
         await this.db.delete('categories', id);
-        
-        alert(`Categoria eliminada junto con ${txsToDelete.length} transacciones.`);
         this.updateUI();
     }
 
-    //LOGICA DE TRANSACCIONES
+    //TRANSACCIONES
 
-    //1. Renderizar la tabla de transacciones
+    //Renderizar transacciones
     async renderTransactions() {
         const allTxs = await this.db.getAll('transactions');
         const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
-        
         //Obtener valores de los filtros
         const typeFilter = document.getElementById('filter-type')?.value || 'all';
         const categoryFilter = document.getElementById('filter-category')?.value || 'all';
         
         const filtered = allTxs
             .filter(t => {
-                //1. Coincidencia por texto (Descripción o Categoria)
+                //Coincidencia por texto (Descripcion o Categoria)
                 const matchesSearch = (t.desc||'').toLowerCase().includes(search) || t.category.toLowerCase().includes(search);
-                
-                //2. Coincidencia por Tipo (Ingreso/Egreso)
+                //Coincidencia por Tipo (Ingreso/Egreso)
                 const matchesType = typeFilter === 'all' || t.type === typeFilter;
-
-                //3. Coincidencia por Categoria
+                //Coincidencia por Categoria
                 const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-
                 //TIENEN QUE CUMPLIRSE LAS 3 CONDICIONES
                 return matchesSearch && matchesType && matchesCategory;
             })
@@ -326,54 +316,47 @@ class FinanceApp {
 
         const tbody = document.getElementById('tx-list');
         if(!tbody) return;
-
-        // Limpieza segura
+        //Limpieza segura
         tbody.replaceChildren();
 
         filtered.forEach(tx => {
             const isIncome = tx.type === 'income';
             const row = this.createEl('tr');
-
             //Fecha
             row.appendChild(this.createEl('td', '', tx.date));
-
-            //Tipo 
+            //Tipo
             const tdType = this.createEl('td');
-            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Ingreso' : 'Egreso');
+            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Alma' : 'Daño');
             tdType.appendChild(spanType);
             row.appendChild(tdType);
             //Categoria y Descripcion
             row.appendChild(this.createEl('td', '', tx.category));
             row.appendChild(this.createEl('td', '', tx.desc || '-'));
-
             //Monto
             const tdAmount = this.createEl('td', isIncome ? 'text-success font-bold' : 'text-danger font-bold');
-            tdAmount.textContent = `${isIncome ? '+' : '-'}$${tx.amount.toFixed(2)}`;
+            tdAmount.textContent = `${isIncome ? '+' : '-'}${tx.amount.toFixed(2)}`;
             row.appendChild(tdAmount);
             //Acciones (Editar/Borrar)
             const tdActions = this.createEl('td');
             tdActions.style.display = 'flex';
             tdActions.style.gap = '5px';
-
+            //Botones de accion
             const btnEdit = this.createEl('button', 'btn btn-primary');
-            btnEdit.title = 'Editar';
             btnEdit.onclick = () => this.editTransaction(tx.id);
             btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
-            
+            //Boton borrar
             const btnDel = this.createEl('button', 'btn btn-danger');
-            btnDel.title = 'Borrar';
             btnDel.onclick = () => this.deleteTransaction(tx.id);
             btnDel.appendChild(this.createEl('i', 'fas fa-trash'));
-
+            //Agregar botones a la celda
             tdActions.appendChild(btnEdit);
             tdActions.appendChild(btnDel);
             row.appendChild(tdActions);
-
             tbody.appendChild(row);
         });
     }
 
-    //2. Agregar nueva transaccion
+    //Agregar o actualizar transaccion
     async addTransaction(e) {
         e.preventDefault();
         const type = document.getElementById('tx-type').value;
@@ -389,11 +372,10 @@ class FinanceApp {
                 id: this.editingTxId, //Importante: Mantener el ID
                 type, amount, date, category, desc 
             });
-            
             tx.oncomplete = () => {
-                alert('Transaccion actualizada');
-                this.editingTxId = null; //Resetear estado
-                document.querySelector('#tx-form button[type="submit"]').innerText = "Guardar";
+                alert('Registro actualizado');
+                this.editingTxId = null; //Resetear el ID de edicion
+                document.querySelector('#tx-form button[type="submit"]').innerText = "Grabar";
                 e.target.reset();
                 this.updateUI();
             };
@@ -403,59 +385,53 @@ class FinanceApp {
             e.target.reset();
             document.getElementById('tx-date').valueAsDate = new Date();
             this.updateUI();
-            alert('Transaccion guardada');
+            alert('Registro guardado en el diario');
         }
     }
-    //3. Editar transaccion
+
+    //Editar transaccion
     async editTransaction(id) {
         const txs = await this.db.getAll('transactions');
         const tx = txs.find(t => t.id === id);
         if (!tx) return;
-
-        //Llenar el formulario
+        //Rellenar formulario con datos existentes
         document.getElementById('tx-type').value = tx.type;
         document.getElementById('tx-amount').value = tx.amount;
         document.getElementById('tx-date').value = tx.date;
         document.getElementById('tx-category').value = tx.category;
         document.getElementById('tx-desc').value = tx.desc;
-
-        //Cambiar estado a edición
+        //Cambiar estado a modo edicion
         this.editingTxId = id;
-        document.querySelector('#tx-form button[type="submit"]').innerText = "Actualizar";
-        
-        //Scrollear hacia arriba para ver el form
+        document.querySelector('#tx-form button[type="submit"]').innerText = "Reescribir";
+        //Mover hacia el formulario
         document.getElementById('tx-form').scrollIntoView({behavior: 'smooth'});
     }
 
+    //Eliminar transaccion
     async deleteTransaction(id) {
-        if(confirm('¿Eliminar transaccion?')) {
+        if(confirm('¿Borrar este registro del diario?')) {
             await this.db.delete('transactions', id);
             this.updateUI();
         }
     }
 
-    //LOGICA DE PRESUPUESTOS
+    //PRESUPUESTOS
 
-    //1. Guardar presupuesto
+    //Guuardar presupuesto
     async saveBudget(e) {
         e.preventDefault();
         const category = document.getElementById('budget-category').value;
         const amount = parseFloat(document.getElementById('budget-amount').value);
-        
-        //ID unico compuesto: "2023-10-Alimentacion"
         const id = `${this.currentMonth}-${category}`;
-        
-        //Usamos .put en lugar de .add para sobrescribir si ya existe
         const tx = this.db.db.transaction('budgets', 'readwrite');
         tx.objectStore('budgets').put({ id, month: this.currentMonth, category, limit: amount });
-        
         tx.oncomplete = () => {
-            alert('Presupuesto actualizado');
+            alert('Amuleto de presupuesto equipado');
             this.updateUI();
         };
     }
 
-    //2. Renderizar presupuestos
+    //Renderizar presupuestos
     async renderBudgets() {
         const budgets = await this.db.getAll('budgets');
         const transactions = await this.db.getAll('transactions');
@@ -484,16 +460,12 @@ class FinanceApp {
 
             //Categoria
             row.appendChild(this.createEl('td', '', b.category));
-            
-            //Presupuesto
-            row.appendChild(this.createEl('td', '', `$${b.limit.toFixed(2)}`));
-            
-            //Gasto Real
-            row.appendChild(this.createEl('td', '', `$${real.toFixed(2)}`));
+            row.appendChild(this.createEl('td', '', `${b.limit.toFixed(2)}`));
+            row.appendChild(this.createEl('td', '', `${real.toFixed(2)}`));
             
             //Diferencia
             const tdDiff = this.createEl('td', diff < 0 ? 'text-danger' : 'text-success');
-            tdDiff.textContent = `$${diff.toFixed(2)}`;
+            tdDiff.textContent = `${diff.toFixed(2)}`;
             row.appendChild(tdDiff);
 
             //Estado (Porcentaje)
@@ -522,9 +494,9 @@ class FinanceApp {
         });
     }
 
-    //3. Eliminar presupuesto
+    //Eliminar presupuesto
     async deleteBudget(id) {
-        if(confirm('¿Eliminar presupuesto para esta categoria?')) {
+        if(confirm('¿Desequipar este presupuesto?')) {
             await this.db.delete('budgets', id);
             this.updateUI();
         }
@@ -546,11 +518,11 @@ class FinanceApp {
             }
         });
 
-        // KPIs
+        //KPIs
         if(document.getElementById('kpi-income')) {
-            document.getElementById('kpi-income').innerText = `$${income.toFixed(2)}`;
-            document.getElementById('kpi-expense').innerText = `$${expense.toFixed(2)}`;
-            document.getElementById('kpi-balance').innerText = `$${(income - expense).toFixed(2)}`;
+            document.getElementById('kpi-income').innerText = `${income.toFixed(2)}`;
+            document.getElementById('kpi-expense').innerText = `${expense.toFixed(2)}`;
+            document.getElementById('kpi-balance').innerText = `${(income - expense).toFixed(2)}`;
             
             const monthBudgets = budgets.filter(b => b.month === this.currentMonth);
             const totalBudget = monthBudgets.reduce((acc, b) => acc + b.limit, 0);
@@ -568,7 +540,7 @@ class FinanceApp {
                 row.appendChild(this.createEl('td', '', t.date));
                 row.appendChild(this.createEl('td', '', t.category));
                 const tdAmount = this.createEl('td', t.type === 'income' ? 'text-success' : 'text-danger');
-                tdAmount.textContent = `$${t.amount.toFixed(2)}`;
+                tdAmount.textContent = `${t.amount.toFixed(2)}`;
                 row.appendChild(tdAmount);
                 recentTable.appendChild(row);
             });
@@ -578,34 +550,35 @@ class FinanceApp {
         this.renderCharts(monthTxs, expensesByCat, income, expense, budgets, txs);
     }
 
+    //Renderizar graficos
     renderCharts(monthTxs, expensesByCat, income, expense, allBudgets, allTxs) {
         if (!this.charts) this.charts = {};
         const destroyChart = (id) => { if (this.charts[id]) this.charts[id].destroy(); };
 
-        //1. Dona (Categorias)
+        //Dona (Categorias)
         if(document.getElementById('chart-categories')) {
             destroyChart('chart-categories');
             this.charts['chart-categories'] = new Chart(document.getElementById('chart-categories'), {
                 type: 'doughnut',
                 data: {
                     labels: Object.keys(expensesByCat),
-                    datasets: [{ data: Object.values(expensesByCat), backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'] }]
+                    datasets: [{ data: Object.values(expensesByCat), backgroundColor: this.colors }]
                 },
-                options: { plugins: { title: { display: true, text: 'Gastos por Categoria' } }, maintainAspectRatio: false }
+                options: { plugins: { title: { display: true, text: 'Distribución de Daño' } }, maintainAspectRatio: false }
             });
         }
 
-        //2. Barras (Balance)
+        //Barras (Balance)
         if(document.getElementById('chart-distribution')) {
             destroyChart('chart-distribution');
             this.charts['chart-distribution'] = new Chart(document.getElementById('chart-distribution'), {
                 type: 'bar',
-                data: { labels: ['Ingresos', 'Egresos'], datasets: [{ label: 'Monto', data: [income, expense], backgroundColor: ['#10b981', '#ef4444'] }] },
-                options: { plugins: { title: { display: true, text: 'Balance Mensual' } }, maintainAspectRatio: false }
+                data: { labels: ['Alma', 'Daño'], datasets: [{ label: 'Geos', data: [income, expense], backgroundColor: ['#a5d6ff', '#ffa657'] }] },
+                options: { plugins: { title: { display: true, text: 'Equilibrio del Vacío' } }, maintainAspectRatio: false }
             });
         }
         
-        //3. Linea (Tendencia)
+        //Linea (Tendencia)
         const history = {};
         allTxs.forEach(t => {
             const m = t.date.slice(0, 7);
@@ -618,12 +591,12 @@ class FinanceApp {
             destroyChart('chart-balance-trend');
             this.charts['chart-balance-trend'] = new Chart(document.getElementById('chart-balance-trend'), {
                 type: 'line',
-                data: { labels: sortedMonths, datasets: [{ label: 'Balance Historico', data: sortedMonths.map(m => history[m]), borderColor: '#3b82f6', tension: 0.1 }] },
-                options: { plugins: { title: { display: true, text: 'Evolucion' } }, maintainAspectRatio: false }
+                data: { labels: sortedMonths, datasets: [{ label: 'Historia', data: sortedMonths.map(m => history[m]), borderColor: '#a5d6ff', tension: 0.1 }] },
+                options: { plugins: { title: { display: true, text: 'Crónica del Tiempo' } }, maintainAspectRatio: false }
             });
         }
 
-        //4. Barras Agrupadas (Presupuesto)
+        //Barras Agrupadas (Presupuesto)
         const monthBudgets = allBudgets.filter(b => b.month === this.currentMonth);
         const labels = monthBudgets.map(b => b.category);
         
@@ -634,11 +607,11 @@ class FinanceApp {
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Presupuesto', data: monthBudgets.map(b => b.limit), backgroundColor: '#cbd5e1' },
-                        { label: 'Real', data: monthBudgets.map(b => expensesByCat[b.category] || 0), backgroundColor: '#f59e0b' }
+                        { label: 'Límite', data: monthBudgets.map(b => b.limit), backgroundColor: '#30363d' },
+                        { label: 'Actual', data: monthBudgets.map(b => expensesByCat[b.category] || 0), backgroundColor: '#ffa657' }
                     ]
                 },
-                options: { plugins: { title: { display: true, text: 'Presupuesto vs Realidad' } }, maintainAspectRatio: false }
+                options: { plugins: { title: { display: true, text: 'Sobrecarga de Amuletos' } }, maintainAspectRatio: false }
             });
         }
     }
@@ -661,10 +634,10 @@ class FinanceApp {
         
         //Cambiar titulo
         const titles = {
-            'dashboard': 'Dashboard Principal',
-            'transactions': 'Historial de Transacciones',
-            'categories': 'Gestion de Categorias',
-            'budgets': 'Control de Presupuestos'
+            'dashboard': 'Mapa del Reino',
+            'transactions': 'Diario del Cazador',
+            'categories': 'Zonas de Hallownest',
+            'budgets': 'Gestión de Amuletos'
         };
         const titleEl = document.getElementById('page-title');
         if(titleEl) titleEl.innerText = titles[sectionId];

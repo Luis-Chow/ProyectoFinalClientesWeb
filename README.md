@@ -4,7 +4,7 @@ Proyecto de Lenguajes de Clientes Web 2025C para el control de gastos e ingresos
 
 Hecho por:
 Luis Chow 30551013
-Jesus Quintero 
+Jesus Quintero 31775209
 
 # Características Principales
 

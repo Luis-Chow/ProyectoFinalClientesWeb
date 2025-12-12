@@ -93,7 +93,7 @@
                         <tr>
                             <th>Fecha</th>
                             <th>Categoría</th>
-                            <th>Dinero</th>
+                            <th>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-recent-tx"></tbody>
@@ -109,56 +109,57 @@
             </div>
         </section>
 
-        <!--VISTA: TRANSACCIONES-->
-        <section id="transactions" class="section">
-            <div class="card form-group ornate-card">
-                <h3>Inscribir en el Diario</h3>
-                <form id="tx-form" onsubmit="app.addTransaction(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 1rem;">
-                    <select id="tx-type" class="form-control" required>
-                        <option value="expense">Daño (Egreso)</option>
-                        <option value="income">Alma (Ingreso)</option>
-                    </select>
-                    <input type="number" id="tx-amount" placeholder="Cantidad de Geos" class="form-control" step="0.01" min="0" required>
-                    <input type="date" id="tx-date" class="form-control" required>
-                    <select id="tx-category" class="form-control" required>
-                        <option value="">Tipo de Enemigo...</option>
-                    </select>
-                    <input type="text" id="tx-desc" placeholder="Notas del Cazador..." class="form-control">
-                    <button type="submit" class="btn btn-primary">Grabar</button>
-                </form>
-            </div>
+<!-- VISTA: TRANSACCIONES -->
+<section id="transactions" class="section">
+    <div class="card form-group ornate-card">
+        <h3>Inscribir en el Diario</h3>
+        <form id="tx-form" onsubmit="app.addTransaction(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 1rem;">
+            <select id="tx-type" class="form-control" required>
+                <option value="expense">Egreso</option>
+                <option value="income">Ingreso</option>
+            </select>
+            <input type="number" id="tx-amount" placeholder="Cantidad" class="form-control" step="0.01" min="0" required>
+            <input type="date" id="tx-date" class="form-control" required>
+            <select id="tx-category" class="form-control" required>
+                <option value="">Tipo de Enemigo...</option>
+            </select>
+            <input type="text" id="tx-desc" placeholder="Notas..." class="form-control">
+            <button type="submit" class="btn btn-primary">Grabar</button>
+            <button type="button" id="tx-cancel-btn" class="btn btn-danger" style="display: none;" onclick="app.cancelEditTransaction()">Cancelar</button>
+        </form>
+    </div> 
 
-            <div class="card ornate-card">
-                <div style="display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <input type="text" id="search-tx" placeholder="Buscar en el diario..." class="form-control" style="margin-bottom: 0; flex: 2; min-width: 200px;" onkeyup="app.renderTransactions()">
-                    
-                    <select id="filter-type" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
-                        <option value="all">Todo</option>
-                        <option value="income">Alma</option>
-                        <option value="expense">Daño</option>
-                    </select>
+    <div class="card ornate-card">
+        <div style="display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
+            <input type="text" id="search-tx" placeholder="Buscar en el diario..." class="form-control" style="margin-bottom: 0; flex: 2; min-width: 200px;" onkeyup="app.renderTransactions()">
+            
+            <select id="filter-type" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
+                <option value="all">Todo</option>
+                <option value="income">Ingresos</option>
+                <option value="expense">Egresos</option>
+            </select>
 
-                    <select id="filter-category" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
-                        <option value="all">Todas las Clases</option>
-                    </select>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Tipo</th>
-                                <th>Categoría</th>
-                                <th>Notas</th>
-                                <th>Geos</th>
-                                <th>Destino</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tx-list"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+            <select id="filter-category" class="form-control" style="margin-bottom: 0; flex: 1; min-width: 150px;" onchange="app.renderTransactions()">
+                <option value="all">Todas las Categorias</option>
+            </select>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Categoría</th>
+                        <th>Notas</th>
+                        <th>Cantidad</th>
+                        <th>Destino</th>
+                    </tr>
+                </thead>
+                <tbody id="tx-list"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
 
         <!-- VISTA: CATEGORIAS -->
         <section id="categories" class="section">
@@ -189,19 +190,19 @@
         <!--VISTA: PRESUPUESTOS-->
         <section id="budgets" class="section">
             <div class="card ornate-card" style="margin-bottom: 1rem;">
-                <h3>Límites de Muescas</h3>
+                <h3>Limites</h3>
                 <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Define tu capacidad máxima para este ciclo.</p>
                 <form onsubmit="app.saveBudget(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                     <select id="budget-category" class="form-control" required>
                         <option value="">Cargando...</option>
                     </select>
-                    <input type="number" id="budget-amount" placeholder="Límite de Geos" class="form-control" required>
-                    <button type="submit" class="btn btn-primary">Equipar</button>
+                    <input type="number" id="budget-amount" placeholder="Límite de Dinero" class="form-control" required>
+                    <button type="submit" class="btn btn-primary">Agregar</button>
                 </form>
             </div>
             
             <div class="card ornate-card">
-                <h3>Estado de Amuletos (Mes Actual)</h3>
+                <h3>Estado de Presupuestos (Mes Actual)</h3>
                 <table class="data-table">
                     <thead>
                         <tr>

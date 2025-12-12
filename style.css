@@ -466,3 +466,80 @@ body {
     color: var(--soul-blue);
     text-shadow: 0 0 10px rgba(165, 214, 255, 0.3);
 }
+/* ============================================= */
+/* RESALTADO SIMPLE PARA TRANSACCIONES EN EDICIÓN */
+/* ============================================= */
+
+/* Fila resaltada */
+#tx-list tr.editing-transaction {
+    background: rgba(165, 214, 255, 0.1) !important;
+    border-left: 4px solid var(--soul-blue) !important;
+}
+
+/* Celdas de la fila resaltada */
+#tx-list tr.editing-transaction td {
+    border-color: rgba(165, 214, 255, 0.2);
+}
+
+/* Efecto hover adicional */
+#tx-list tr.editing-transaction:hover {
+    background: rgba(165, 214, 255, 0.15) !important;
+}
+
+/* Icono de edición en la primera celda */
+#tx-list tr.editing-transaction td:first-child {
+    position: relative;
+}
+
+#tx-list tr.editing-transaction td:first-child::before {
+    content: '✏️';
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--soul-blue);
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+/* ============================================= */
+/* FORMULARIO EN MODO EDICIÓN (SIMPLE) */
+/* ============================================= */
+
+/* Formulario resaltado */
+#tx-form.editing-mode {
+    border: 2px solid var(--soul-blue);
+    background: rgba(165, 214, 255, 0.05);
+    position: relative;
+}
+
+/* Badge "Editando transacción" */
+#tx-form.editing-mode::before {
+    content: "Editando transacción";
+    position: absolute;
+    top: -12px;
+    left: 15px;
+    background: var(--soul-blue);
+    color: var(--bg-void);
+    padding: 3px 10px;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    font-family: var(--font-heading);
+    font-weight: bold;
+    z-index: 10;
+}
+
+/* ============================================= */
+/* BOTÓN CANCELAR (SIMPLE) */
+/* ============================================= */
+
+#tx-cancel-btn {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+}
+
+#tx-cancel-btn:hover {
+    background: #ff6b6b;
+    color: var(--bg-void);
+}

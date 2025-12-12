@@ -105,6 +105,7 @@ class FinanceApp {
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         this.currentMonth = `${year}-${month}`;
+        this.editingTransactionRow = null;
         this.charts = {}; 
         this.editingTxId = null;
         //Texto blanco para los graficos
@@ -176,7 +177,7 @@ class FinanceApp {
             //Guardamos el valor actual para no perder la selección al refrescar
             currentFilterVal = selectFilterCat.value;
             selectFilterCat.replaceChildren();
-            const allOpt = this.createEl('option', '', 'Todas las Clases');
+            const allOpt = this.createEl('option', '', 'Todas las Categorias');
             allOpt.value = 'all';
             selectFilterCat.appendChild(allOpt);
         }
@@ -367,7 +368,7 @@ class FinanceApp {
 
     //TRANSACCIONES
 
-    //Renderizar transacciones
+        //Renderizar transacciones
     async renderTransactions() {
         const allTxs = await this.db.getAll('transactions');
         const search = (document.getElementById('search-tx')?.value || '').toLowerCase();
@@ -396,11 +397,17 @@ class FinanceApp {
         filtered.forEach(tx => {
             const isIncome = tx.type === 'income';
             const row = this.createEl('tr');
+            row.dataset.transactionId = tx.id;
+            if (this.editingTxId === tx.id) {
+                row.classList.add('editing-transaction');
+                console.log(`Transacción ${tx.id} marcada como en edición al renderizar`);
+            }
+            
             //Fecha
             row.appendChild(this.createEl('td', '', tx.date));
             //Tipo
             const tdType = this.createEl('td');
-            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Alma' : 'Daño');
+            const spanType = this.createEl('span', isIncome ? 'tag tag-income' : 'tag tag-expense', isIncome ? 'Ingreso' : 'Egreso');
             tdType.appendChild(spanType);
             row.appendChild(tdType);
             //Categoria y Descripcion
@@ -431,6 +438,7 @@ class FinanceApp {
     }
 
     //Agregar o actualizar transaccion
+    //Agregar o actualizar transaccion
     async addTransaction(e) {
         e.preventDefault();
         const type = document.getElementById('tx-type').value;
@@ -440,6 +448,7 @@ class FinanceApp {
         const desc = document.getElementById('tx-desc').value;
 
         if (this.editingTxId) {
+            // MODO EDICIÓN
             const tx = this.db.db.transaction('transactions', 'readwrite');
             const store = tx.objectStore('transactions');
             store.put({ 
@@ -448,13 +457,33 @@ class FinanceApp {
             });
             tx.oncomplete = () => {
                 alert('Registro actualizado');
-                this.editingTxId = null; //Resetear el ID de edicion
-                document.querySelector('#tx-form button[type="submit"]').innerText = "Grabar";
+                // Resetear estado de edición
+                this.editingTxId = null;
+                
+                // Restaurar texto del botón
+                const submitBtn = document.querySelector('#tx-form button[type="submit"]');
+                if (submitBtn) submitBtn.textContent = "Grabar";
+                
+                // Ocultar botón cancelar
+                const cancelBtn = document.getElementById('tx-cancel-btn');
+                if (cancelBtn) cancelBtn.style.display = 'none';
+                
+                // Remover clase de edición del formulario
+                const form = document.getElementById('tx-form');
+                if (form) form.classList.remove('editing-mode');
+                
+                // Remover resaltado
+                this.removeTransactionHighlight();
+                
+                // Resetear formulario
                 e.target.reset();
+                document.getElementById('tx-date').valueAsDate = new Date();
+                
+                // Actualizar UI
                 this.updateUI();
             };
         } else {
-            //MODO CREACION
+            // MODO CREACIÓN
             await this.db.add('transactions', { type, amount, date, category, desc });
             e.target.reset();
             document.getElementById('tx-date').valueAsDate = new Date();
@@ -464,21 +493,127 @@ class FinanceApp {
     }
 
     //Editar transaccion
+    //Editar transaccion
     async editTransaction(id) {
+        // Remover resaltado de cualquier transacción anterior
+        this.removeTransactionHighlight();
+        
         const txs = await this.db.getAll('transactions');
         const tx = txs.find(t => t.id === id);
         if (!tx) return;
-        //Rellenar formulario con datos existentes
+        
+        // Rellenar formulario con datos existentes
         document.getElementById('tx-type').value = tx.type;
         document.getElementById('tx-amount').value = tx.amount;
         document.getElementById('tx-date').value = tx.date;
         document.getElementById('tx-category').value = tx.category;
         document.getElementById('tx-desc').value = tx.desc;
-        //Cambiar estado a modo edicion
+        
+        // Cambiar estado a modo edicion
         this.editingTxId = id;
-        document.querySelector('#tx-form button[type="submit"]').innerText = "Reescribir";
-        //Mover hacia el formulario
+        
+        // Cambiar texto del botón
+        const submitBtn = document.querySelector('#tx-form button[type="submit"]');
+        submitBtn.textContent = "Actualizar";
+        
+        // Mostrar botón cancelar
+        const cancelBtn = document.getElementById('tx-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'inline-block';
+        
+        // Agregar clase de edición al formulario
+        const form = document.getElementById('tx-form');
+        if (form) form.classList.add('editing-mode');
+        
+       // Resaltar la fila en la tabla
+        this.highlightTransactionRow(id);
+        
+        // Mover hacia el formulario
         document.getElementById('tx-form').scrollIntoView({behavior: 'smooth'});
+        
+        // Forzar actualización después de un breve delay
+        setTimeout(() => {
+            this.refreshTransactionHighlight();
+        }, 200);
+    }
+    // Resaltar fila de transacción en edición
+    highlightTransactionRow(id) {
+        console.log(`Intentando resaltar transacción ID: ${id}`);
+        
+        // Primero, remover el resaltado de cualquier fila anterior
+        this.removeTransactionHighlight();
+        
+        // Buscar la fila por el atributo data-transaction-id
+        const row = document.querySelector(`#tx-list tr[data-transaction-id="${id}"]`);
+        
+        if (row) {
+            // Agregar la clase de resaltado
+            row.classList.add('editing-transaction');
+            this.editingTransactionRow = row;
+            
+            // Scroll a la fila resaltada (opcional)
+            row.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+            
+            console.log(`✓ Fila resaltada exitosamente para transacción ID: ${id}`);
+        } else {
+            console.warn(`⚠ No se encontró la fila para transacción ID: ${id}. La tabla puede necesitar ser recargada.`);
+            
+            // Si no encontramos la fila, recargar la tabla
+            setTimeout(() => {
+                this.renderTransactions();
+                // Intentar resaltar de nuevo después de recargar
+                setTimeout(() => {
+                    const rowAfterReload = document.querySelector(`#tx-list tr[data-transaction-id="${id}"]`);
+                    if (rowAfterReload) {
+                        rowAfterReload.classList.add('editing-transaction');
+                        this.editingTransactionRow = rowAfterReload;
+                        console.log(`✓ Fila resaltada después de recargar para ID: ${id}`);
+                    }
+                }, 100);
+            }, 100);
+        }
+    }
+
+
+    // Remover resaltado de transacción
+    removeTransactionHighlight() {
+        // Remover clase de todas las filas
+        document.querySelectorAll('#tx-list tr').forEach(row => {
+            row.classList.remove('editing-transaction');
+        });
+        this.editingTransactionRow = null;
+        
+        // Remover clase del formulario
+        const form = document.getElementById('tx-form');
+        if (form) form.classList.remove('editing-mode');
+    }
+    
+    // Cancelar edición de transacción
+    cancelEditTransaction() {
+        // Resetear estado de edición
+        this.editingTxId = null;
+        
+        // Resetear formulario
+        const form = document.getElementById('tx-form');
+        if (form) {
+            form.reset();
+            form.classList.remove('editing-mode');
+        }
+        
+        // Restaurar texto del botón
+        const submitBtn = document.querySelector('#tx-form button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = "Grabar";
+        
+        // Ocultar botón cancelar
+        const cancelBtn = document.getElementById('tx-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        
+        // Remover resaltado
+        this.removeTransactionHighlight();
+        
+        console.log("Edición de transacción cancelada");
     }
 
     //Eliminar transaccion
@@ -500,7 +635,7 @@ class FinanceApp {
         const tx = this.db.db.transaction('budgets', 'readwrite');
         tx.objectStore('budgets').put({ id, month: this.currentMonth, category, limit: amount });
         tx.oncomplete = () => {
-            alert('Amuleto de presupuesto equipado');
+            alert('presupuesto agregado');
             this.updateUI();
         };
     }
@@ -685,7 +820,7 @@ class FinanceApp {
                         { label: 'Actual', data: monthBudgets.map(b => expensesByCat[b.category] || 0), backgroundColor: '#ffa657' }
                     ]
                 },
-                options: { plugins: { title: { display: true, text: 'Sobrecarga de Amuletos' } }, maintainAspectRatio: false }
+                options: { plugins: { title: { display: true, text: 'Sobrecarga de presupuestos' } }, maintainAspectRatio: false }
             });
         }
     }
@@ -709,9 +844,9 @@ class FinanceApp {
         //Cambiar titulo
         const titles = {
             'dashboard': 'Mapa del Reino',
-            'transactions': 'Diario del Cazador',
+            'transactions': 'Diario de Movimientos',
             'categories': 'Categorias en Hallownest',
-            'budgets': 'Gestión de Amuletos'
+            'budgets': 'Gestión de Presupuestos'
         };
         const titleEl = document.getElementById('page-title');
         if(titleEl) titleEl.innerText = titles[sectionId];

@@ -144,7 +144,7 @@ class FinanceApp {
         return el;
     }
     
-    //CATEGORIAS
+// CATEGORIAS
 
     //Renderizar categorias
     async renderCategories() {
@@ -191,7 +191,7 @@ class FinanceApp {
                 const tdActions = this.createEl('td');
                 const btnEdit = this.createEl('button', 'btn btn-primary');
                 btnEdit.style.marginRight = '5px';
-                btnEdit.onclick = () => this.editCategory(cat.id);
+                btnEdit.onclick = () => this.prepareEditCategory(cat.id, cat.name); // CAMBIADO
                 btnEdit.appendChild(this.createEl('i', 'fas fa-edit'));
 
                 const btnDel = this.createEl('button', 'btn btn-danger');
@@ -226,32 +226,106 @@ class FinanceApp {
         if (selectFilterCat) selectFilterCat.value = currentFilterVal;
     }
 
-    //Agregar categoria
-    async addCategory(e) {
+    //Manejar el formulario de categorias (crear o editar)
+    async handleCategoryForm(e) {
         e.preventDefault(); //Evita que se recargue la pagina
+        
+        const catIdInput = document.getElementById('cat-id');
         const nameInput = document.getElementById('cat-name');
         const name = nameInput.value;
+        
         if(name) {
-            await this.db.add('categories', { name });
+            if (catIdInput.value) {
+                // Modo EDITAR
+                await this.editCategory(catIdInput.value, name);
+            } else {
+                // Modo CREAR
+                await this.db.add('categories', { name });
+                alert('Nueva Categoria agregada.');
+            }
+            
             nameInput.value = '';  //Limpiar input
+            catIdInput.value = ''; // Limpiar ID
+            this.resetCategoryForm(); // Resetear formulario
             this.updateUI(); //Recargar lista
-            alert('Nueva zona descubierta.');
         }
     }
 
-    //Editar categoria
-    async editCategory(id) {
+    //Preparar formulario para editar categoria
+    prepareEditCategory(id, name) {
+        const formTitle = document.getElementById('category-form-title');
+        const submitBtn = document.getElementById('category-submit-btn');
+        const cancelBtn = document.getElementById('category-cancel-btn');
+        const catIdInput = document.getElementById('cat-id');
+        const catNameInput = document.getElementById('cat-name');
+        
+        // Cambiar textos
+        formTitle.textContent = 'Editar Categoria';
+        submitBtn.textContent = 'Actualizar';
+        
+        // Mostrar botón cancelar
+        cancelBtn.style.display = 'inline-block';
+        
+        // Llenar datos en el formulario
+        catIdInput.value = id;
+        catNameInput.value = name;
+        
+        // Enfocar y seleccionar el texto
+        catNameInput.focus();
+        catNameInput.select();
+        
+        // Desplazar al formulario
+        document.getElementById('category-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    
+    //Resetear formulario de categorias
+    resetCategoryForm() {
+        const formTitle = document.getElementById('category-form-title');
+        const submitBtn = document.getElementById('category-submit-btn');
+        const cancelBtn = document.getElementById('category-cancel-btn');
+        const catIdInput = document.getElementById('cat-id');
+        const catNameInput = document.getElementById('cat-name');
+        
+        // Restaurar textos
+        formTitle.textContent = 'Nuevas Categorias';
+        submitBtn.textContent = 'Agregar';
+        submitBtn.innerHTML = 'Agregar'; // También resetear el HTML por si tiene iconos
+        
+        // Ocultar botón cancelar
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        
+        // LIMPIAR INPUTS - ESTA ES LA PARTE IMPORTANTE
+        if (catIdInput) {
+            catIdInput.value = '';
+            console.log("Input cat-id limpiado");
+        }
+        
+        if (catNameInput) {
+            catNameInput.value = '';
+            catNameInput.placeholder = 'Nombre de la Categoria...';
+            console.log("Input cat-name limpiado");
+        }
+        
+        // Remover cualquier clase de edición del formulario
+        const form = document.getElementById('category-form');
+        if (form) {
+            form.classList.remove('editing-mode');
+        }
+    }
+
+    //Editar categoria (nueva versión sin prompt)
+    async editCategory(id, newName) {
         const categories = await this.db.getAll('categories');
-        const cat = categories.find(c => c.id === id);
+        const cat = categories.find(c => c.id === parseInt(id));
         if (!cat) return;
 
-        const newName = prompt("Renombrar zona:", cat.name);
         if (newName && newName !== cat.name) {
             //Actualizar la categoria
             const txCat = this.db.db.transaction(['categories', 'transactions'], 'readwrite');
             //Actualizar Category Store
             const catStore = txCat.objectStore('categories');
-            catStore.put({ id: id, name: newName });
+            catStore.put({ id: parseInt(id), name: newName });
             //Actualizar Transacciones asociadas
             const txStore = txCat.objectStore('transactions');
             const allTxsRequest = txStore.getAll();
@@ -274,7 +348,7 @@ class FinanceApp {
 
     //Eliminar categoria
     async deleteCategory(id) {
-        if(!confirm('¿Olvidar zona? Se perderán todos los registros asociados.')) return;
+        if(!confirm('¿Olvidar Categoria? Se perderán todos los registros asociados.')) return;
         //Obtenemos la categoria para saber su nombre
         const categories = await this.db.getAll('categories');
         const categoryToDelete = categories.find(c => c.id === id);
@@ -636,7 +710,7 @@ class FinanceApp {
         const titles = {
             'dashboard': 'Mapa del Reino',
             'transactions': 'Diario del Cazador',
-            'categories': 'Zonas de Hallownest',
+            'categories': 'Categorias en Hallownest',
             'budgets': 'Gestión de Amuletos'
         };
         const titleEl = document.getElementById('page-title');

@@ -32,7 +32,7 @@
         <ul class="nav-links">
             <li class="nav-item">
                 <button class="nav-btn active" onclick="app.navigate('dashboard')">
-                    <i class="fas fa-map"></i> <span>Mapa (Dashboard)</span>
+                    <i class="fas fa-map"></i> <span>Dashboard</span>
                 </button>
             </li>
             <li class="nav-item">
@@ -47,7 +47,7 @@
             </li>
             <li class="nav-item">
                 <button class="nav-btn" onclick="app.navigate('budgets')">
-                    <i class="fas fa-gem"></i> <span>Amuletos (Presupuesto)</span>
+                    <i class="fas fa-gem"></i> <span>Presupuesto</span>
                 </button>
             </li>
         </ul>
@@ -57,7 +57,7 @@
     <main class="main-content">
         
         <header class="header">
-            <h2 id="page-title">Mapa del Reino</h2>
+            <h2 id="page-title">Movimientos en el Reino</h2>
             <div class="date-filter">
                 <input type="month" id="global-month">
             </div>
@@ -68,32 +68,32 @@
             <!--KPIs-->
             <div class="kpi-grid">
                 <div class="card soul-border">
-                    <div class="kpi-title">Geos Recolectados (Ingresos)</div>
+                    <div class="kpi-title">Ingresos</div>
                     <div class="kpi-value text-soul" id="kpi-income">$0.00</div>
                 </div>
                 <div class="card void-border">
-                    <div class="kpi-title">Geos Perdidos (Gastos)</div>
+                    <div class="kpi-title">Gastos</div>
                     <div class="kpi-value text-void" id="kpi-expense">$0.00</div>
                 </div>
                 <div class="card crystal-border">
-                    <div class="kpi-title">Balance de Alma</div>
+                    <div class="kpi-title">Balance</div>
                     <div class="kpi-value" id="kpi-balance">$0.00</div>
                 </div>
                 <div class="card infection-border">
-                    <div class="kpi-title">Nivel de Infección (Gasto)</div>
+                    <div class="kpi-title">Nivel de Gasto</div>
                     <div class="kpi-value" id="kpi-budget-status">0%</div>
                 </div>
             </div>
 
             <!--Transacciones Recientes-->
             <div class="card ornate-card" style="margin-top: 2rem; margin-bottom: 2rem;">
-                <h3>Últimos Movimientos en Hallownest</h3>
+                <h3>Movimientos Recientes</h3>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Categoría</th>
-                            <th>Geos</th>
+                            <th>Dinero</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-recent-tx"></tbody>
@@ -160,13 +160,16 @@
             </div>
         </section>
 
-        <!--VISTA: CATEGORIAS-->
+        <!-- VISTA: CATEGORIAS -->
         <section id="categories" class="section">
             <div class="card ornate-card" style="margin-bottom: 1rem;">
-                <h3>Nuevas Zonas</h3>
-                <form onsubmit="app.addCategory(event)" style="display: flex; gap: 10px; margin-top: 1rem;">
-                    <input type="text" id="cat-name" placeholder="Nombre de la zona..." class="form-control" required>
-                    <button type="submit" class="btn btn-primary">Descubrir</button>
+                <h3 id="category-form-title">Nuevas Categorias</h3>
+                <form id="category-form" onsubmit="app.handleCategoryForm(event)" style="display: flex; gap: 10px; margin-top: 1rem;">
+                    <input type="hidden" id="cat-id" value="">
+                    <input type="text" id="cat-name" placeholder="Nombre de la Categoria..." class="form-control" required>
+                    <button type="submit" id="category-submit-btn" class="btn btn-primary">Agregar</button>
+                    <!-- AGREGAR onclick AQUÍ -->
+                    <button type="button" id="category-cancel-btn" class="btn btn-danger" style="display: none;" onclick="app.resetCategoryForm()">Cancelar</button>
                 </form>
             </div>
             
@@ -174,7 +177,7 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Zona</th>
+                            <th>Categoria</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>

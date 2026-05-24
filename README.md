@@ -1,4 +1,5 @@
 # Gestor de Finanzas Personales
+> **Demo en vivo:** https://luischow.github.io/gestor-finanzas-personales/
 
 Aplicación web para el control de finanzas personales que permite registrar ingresos y gastos, organizarlos por categorías, definir presupuestos mensuales y visualizar todo en un dashboard interactivo. Funciona completamente en el navegador, sin backend, usando IndexedDB para la persistencia de datos. La interfaz está ambientada con una temática visual inspirada en el videojuego *Hollow Knight*.
 
